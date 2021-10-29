@@ -10,7 +10,7 @@ describe('users', () => {
   scenario('returns a single user', async (scenario) => {
     const result = await user({ id: scenario.user.one.id })
 
-    expect(result).toEqual(scenario.user.one)
+    expect(result.id).toEqual(scenario.user.one.id)
   })
 
   scenario('creates a user', async () => {
@@ -31,9 +31,9 @@ describe('users', () => {
     expect(result.email).toEqual('String74739772')
   })
 
-  scenario('deletes a user', async (scenario) => {
-    const original = await deleteUser({ id: scenario.user.one.id })
-    const result = await user({ id: original.id })
+  scenario.only('deletes a user', async (scenario) => {
+    await deleteUser({ id: scenario.user.one.id })
+    const result = await user({ id: scenario.user.one.id })
 
     expect(result).toEqual(null)
   })

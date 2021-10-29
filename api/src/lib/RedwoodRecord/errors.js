@@ -20,3 +20,10 @@ export class RedwoodRecordNullAttributeError extends RedwoodError {
     this.name = 'RedwoodRecordNullAttributeError'
   }
 }
+
+export class RedwoodRecordMissingAttributeError extends RedwoodError {
+  constructor(name) {
+    super(`${name} is missing`)
+    this.name = 'RedwoodRecordMissingAttributeError'
+  }
+}

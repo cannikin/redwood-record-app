@@ -1,30 +1,29 @@
-import { db } from 'src/lib/db'
+import User from 'src/models/User'
 
 export const users = () => {
-  return db.user.findMany()
+  return User.all()
 }
 
-export const user = ({ id }) => {
-  return db.user.findUnique({
-    where: { id },
-  })
+export const user = async ({ id }) => {
+  try {
+    return await User.find(id)
+  } catch (e) {
+    return null
+  }
 }
 
 export const createUser = ({ input }) => {
-  return db.user.create({
-    data: input,
-  })
+  return User.create(input)
 }
 
-export const updateUser = ({ id, input }) => {
-  return db.user.update({
-    data: input,
-    where: { id },
-  })
+export const updateUser = async ({ id, input }) => {
+  const user = await User.find(id)
+  await user.update(input)
+  return user
 }
 
-export const deleteUser = ({ id }) => {
-  return db.user.delete({
-    where: { id },
-  })
+export const deleteUser = async ({ id }) => {
+  const user = await User.find(id)
+  await user.destroy()
+  return null
 }

@@ -24,6 +24,13 @@ export default class RedwoodRecord {
     })
   }
 
+  static async create(attributes, options = {}) {
+    const record = new this(attributes)
+    await record.save({ throw: options.throw })
+
+    return record
+  }
+
   static async first(where, options = {}) {
     const attributes = await db[this.dbAccessor].findFirst({
       where,
@@ -50,30 +57,71 @@ export default class RedwoodRecord {
   // Public instance methods
 
   constructor(attributes) {
-    this.attributes = attributes
     this._errors = {
       base: [],
     }
-    this._createPropertiesForAttributes()
+    this.attributes = attributes
+  }
+
+  get attributes() {
+    return this._attributes
+  }
+
+  set attributes(attributes) {
+    this._attributes = attributes || {}
+    if (attributes) {
+      this._createPropertiesForAttributes()
+    }
   }
 
   get errors() {
     return this._errors
   }
 
+  async destroy(options = {}) {
+    // try {
+    await db[this.constructor.dbAccessor].delete({
+      where: { [this.constructor.primaryKey]: this.attributes.id },
+      ...options,
+    })
+    // } catch (e) {
+    //   return false
+    // }
+
+    return true
+  }
+
   // Saves the attributes to the database
   async save(options = {}) {
     const { id, ...saveAttributes } = this.attributes
     try {
-      await db[this.constructor.dbAccessor].update({
-        where: { [this.constructor.primaryKey]: id },
-        data: saveAttributes,
-      })
+      let newAttributes
+
+      if (id) {
+        // update existing record
+        newAttributes = await db[this.constructor.dbAccessor].update({
+          where: { [this.constructor.primaryKey]: id },
+          data: saveAttributes,
+        })
+      } else {
+        // create new record
+        newAttributes = await db[this.constructor.dbAccessor].create({
+          data: saveAttributes,
+        })
+      }
+
+      // update attributes in case someone else changed since we last read them
+      this.attributes = newAttributes
     } catch (e) {
-      this._updateErrorHandler(e, options.throw)
+      this._saveErrorHandler(e, options.throw)
       return false
     }
     return true
+  }
+
+  update(attributes = {}, options = {}) {
+    this._attributes = Object.assign(this._attributes, attributes)
+    return this.save(options)
   }
 
   // Private instance methods
@@ -84,22 +132,25 @@ export default class RedwoodRecord {
   // user.name  // => 'Rob'
   _createPropertiesForAttributes() {
     for (const [name, _value] of Object.entries(this.attributes)) {
-      Object.defineProperty(this, name, {
-        get() {
-          return this.attributes[name]
-        },
-        set(value) {
-          this.attributes[name] = value
-        },
-        enumerable: true,
-      })
-      this._errors[name] = []
+      // eslint-disable-next-line
+      if (!this.hasOwnProperty(name)) {
+        Object.defineProperty(this, name, {
+          get() {
+            return this.attributes[name]
+          },
+          set(value) {
+            this.attributes[name] = value
+          },
+          enumerable: true,
+        })
+        this._errors[name] = []
+      }
     }
   }
 
-  // Handles errors from Prisma's update(), converting to this._errors messages,
-  // or throwing RedwoodRecord errors
-  _updateErrorHandler(error, shouldThrow) {
+  // Handles errors from saving a record (either update or create), converting
+  // to this._errors messages, or throwing RedwoodRecord errors
+  _saveErrorHandler(error, shouldThrow) {
     if (error.message.match(/Record to update not found/)) {
       this.errors.base.push(
         `${this.constructor.name} record to update not found`
@@ -112,6 +163,12 @@ export default class RedwoodRecord {
       this.errors[name].push('must not be null')
       if (shouldThrow) {
         throw new Errors.RedwoodRecordNullAttributeError(name)
+      }
+    } else if (error.message.match(/is missing/)) {
+      const [_all, name] = error.message.match(/Argument (\w+)/)
+      this.errors.base.push(`${name} is missing`)
+      if (shouldThrow) {
+        throw new Errors.RedwoodRecordMissingAttributeError(name)
       }
     }
   }
