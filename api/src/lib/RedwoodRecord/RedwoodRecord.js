@@ -15,12 +15,31 @@ export default class RedwoodRecord {
     return this.accessor || camelCase(this.name)
   }
 
+  // Find all records
+  static async all(options = {}) {
+    const records = await db[this.dbAccessor].findMany(options)
+
+    return records.map((record) => {
+      return new this(record)
+    })
+  }
+
+  static async first(where, options = {}) {
+    const attributes = await db[this.dbAccessor].findFirst({
+      where,
+      ...options,
+    })
+
+    return attributes ? new this(attributes) : null
+  }
+
   // Find a single record by ID
-  static async find(id) {
+  static async find(id, options = {}) {
     const attributes = await db[this.dbAccessor].findUnique({
       where: {
         [this.primaryKey]: id,
       },
+      ...options,
     })
     if (attributes === null) {
       throw new Errors.RedwoodRecordNotFoundError(this.name)

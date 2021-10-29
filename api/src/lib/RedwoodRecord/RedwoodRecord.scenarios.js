@@ -7,5 +7,12 @@ export const standard = defineScenario({
         name: 'Rob Cameron',
       },
     },
+    tom: {
+      data: {
+        id: 2,
+        email: 'tom@redwoodjs.com',
+        name: 'Tom Preston-Werner',
+      },
+    },
   },
 })
