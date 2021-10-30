@@ -91,8 +91,6 @@ describe('User subclass', () => {
         const id = scenario.user.rob.id
         const user = await User.find(id)
 
-        console.info(user.email)
-
         expect(user.id).toEqual(id)
       })
 
