@@ -12,16 +12,12 @@ describe('static methods', () => {
     expect(RedwoodRecord.accessor).toEqual(undefined)
   })
 
-  test('defaults to a camelCase dbAccessor name', () => {
-    expect(RedwoodRecord.dbAccessor).toEqual('redwoodRecord')
-  })
-
   test('can override the accessor name if needed', () => {
     class TestClass extends RedwoodRecord {
       static accessor = 'TesterTable'
     }
 
-    expect(TestClass.dbAccessor).toEqual('TesterTable')
+    expect(TestClass.accessor).toEqual('TesterTable')
   })
 })
 
@@ -34,15 +30,13 @@ describe('instance methods', () => {
   })
 
   it('creates getters for each attribute', () => {
-    const attrs = { foo: 'bar' }
-    const record = new RedwoodRecord(attrs)
+    const record = new RedwoodRecord({ foo: 'bar' })
 
     expect(record.foo).toEqual('bar')
   })
 
   it('creates setters for each attribute', () => {
-    const attrs = { foo: 'bar' }
-    const record = new RedwoodRecord(attrs)
+    const record = new RedwoodRecord({ foo: 'bar' })
     record.foo = 'baz'
 
     expect(record.foo).toEqual('baz')
@@ -96,6 +90,8 @@ describe('User subclass', () => {
       scenario('finds a user by ID', async (scenario) => {
         const id = scenario.user.rob.id
         const user = await User.find(id)
+
+        console.info(user.email)
 
         expect(user.id).toEqual(id)
       })

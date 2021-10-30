@@ -10,14 +10,14 @@ export default class RedwoodRecord {
   // Set primary key field name
   static primaryKey = 'id'
 
-  // Returns the DB accessor name
+  // Returns the DB accessor instance
   static get dbAccessor() {
-    return this.accessor || camelCase(this.name)
+    return db[this.accessor || camelCase(this.name)]
   }
 
   // Find all records
   static async all(options = {}) {
-    const records = await db[this.dbAccessor].findMany(options)
+    const records = await this.dbAccessor.findMany(options)
 
     return records.map((record) => {
       return new this(record)
@@ -32,7 +32,7 @@ export default class RedwoodRecord {
   }
 
   static async first(where, options = {}) {
-    const attributes = await db[this.dbAccessor].findFirst({
+    const attributes = await this.dbAccessor.findFirst({
       where,
       ...options,
     })
@@ -42,7 +42,7 @@ export default class RedwoodRecord {
 
   // Find a single record by ID
   static async find(id, options = {}) {
-    const attributes = await db[this.dbAccessor].findUnique({
+    const attributes = await this.dbAccessor.findUnique({
       where: {
         [this.primaryKey]: id,
       },
@@ -54,33 +54,35 @@ export default class RedwoodRecord {
     return new this(attributes)
   }
 
+  // Private instance properties
+
+  #errors = { base: [] }
+  #attributes = {}
+
   // Public instance methods
 
   constructor(attributes) {
-    this._errors = {
-      base: [],
-    }
     this.attributes = attributes
   }
 
   get attributes() {
-    return this._attributes
+    return this.#attributes
   }
 
-  set attributes(attributes) {
-    this._attributes = attributes || {}
-    if (attributes) {
-      this._createPropertiesForAttributes()
+  set attributes(attrs) {
+    if (attrs) {
+      this.#attributes = attrs
+      this.#createPropertiesForAttributes()
     }
   }
 
   get errors() {
-    return this._errors
+    return this.#errors
   }
 
   async destroy(options = {}) {
     // try {
-    await db[this.constructor.dbAccessor].delete({
+    await this.constructor.dbAccessor.delete({
       where: { [this.constructor.primaryKey]: this.attributes.id },
       ...options,
     })
@@ -99,13 +101,13 @@ export default class RedwoodRecord {
 
       if (id) {
         // update existing record
-        newAttributes = await db[this.constructor.dbAccessor].update({
+        newAttributes = await this.constructor.dbAccessor.update({
           where: { [this.constructor.primaryKey]: id },
           data: saveAttributes,
         })
       } else {
         // create new record
-        newAttributes = await db[this.constructor.dbAccessor].create({
+        newAttributes = await this.constructor.dbAccessor.create({
           data: saveAttributes,
         })
       }
@@ -113,14 +115,14 @@ export default class RedwoodRecord {
       // update attributes in case someone else changed since we last read them
       this.attributes = newAttributes
     } catch (e) {
-      this._saveErrorHandler(e, options.throw)
+      this.#saveErrorHandler(e, options.throw)
       return false
     }
     return true
   }
 
   update(attributes = {}, options = {}) {
-    this._attributes = Object.assign(this._attributes, attributes)
+    this.#attributes = Object.assign(this.#attributes, attributes)
     return this.save(options)
   }
 
@@ -130,27 +132,27 @@ export default class RedwoodRecord {
   //
   // const user = new User({ name: 'Rob' })
   // user.name  // => 'Rob'
-  _createPropertiesForAttributes() {
+  #createPropertiesForAttributes() {
     for (const [name, _value] of Object.entries(this.attributes)) {
       // eslint-disable-next-line
       if (!this.hasOwnProperty(name)) {
         Object.defineProperty(this, name, {
           get() {
-            return this.attributes[name]
+            return this.#attributes[name]
           },
           set(value) {
-            this.attributes[name] = value
+            this.#attributes[name] = value
           },
           enumerable: true,
         })
-        this._errors[name] = []
+        this.#errors[name] = []
       }
     }
   }
 
   // Handles errors from saving a record (either update or create), converting
-  // to this._errors messages, or throwing RedwoodRecord errors
-  _saveErrorHandler(error, shouldThrow) {
+  // to this.#errors messages, or throwing RedwoodRecord errors
+  #saveErrorHandler(error, shouldThrow) {
     if (error.message.match(/Record to update not found/)) {
       this.errors.base.push(
         `${this.constructor.name} record to update not found`
