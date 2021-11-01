@@ -1,8 +1,7 @@
 import Post from 'src/models/Post'
-import User from 'src/models/User'
 
 export const posts = async () => {
-  return (await User.find(1)).posts()
+  return context.currentUser.posts()
 }
 
 export const post = ({ id }) => {

@@ -69,14 +69,14 @@ describe('instance methods', () => {
     expect(record.errors.foo).toEqual([])
   })
 
-  scenario.only('instantiates relationships methods', async (scenario) => {
+  scenario('instantiates hasMany relationships methods', async (scenario) => {
     class Post extends RedwoodRecord {}
     class User extends RedwoodRecord {
       static hasMany = [Post]
     }
-    const record = new User()
+    const record = await User.find(scenario.user.rob.id)
 
-    expect(await record.posts()).toEqual([scenario.post.first])
+    expect(typeof record.posts).toEqual('function')
   })
 })
 
@@ -108,6 +108,8 @@ describe('User subclass', () => {
           const user = await User.create({
             email: 'peter@redwoodjs.com',
             name: 'Peter Pistorius',
+            hashedPassword: 'abc',
+            salt: 'abc',
           })
 
           expect(user instanceof User).toEqual(true)
@@ -166,6 +168,9 @@ describe('User subclass', () => {
   describe('instance methods', () => {
     describe('destroy', () => {
       scenario('deletes a record', async (scenario) => {
+        // delete posts ahead of time to avoid foreign key error
+        await db.$executeRawUnsafe(`DELETE from "Post"`)
+
         const user = new User(scenario.user.tom)
         await user.destroy()
 
@@ -178,7 +183,11 @@ describe('User subclass', () => {
     describe('save', () => {
       describe('create', () => {
         scenario('returns true if create is successful', async () => {
-          const user = new User({ email: `${Math.random()}@email.com` })
+          const user = new User({
+            email: `${Math.random()}@email.com`,
+            hashedPassword: 'abc',
+            salt: 'abc',
+          })
           const result = await user.save()
 
           expect(result).toEqual(true)
