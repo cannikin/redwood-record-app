@@ -33,10 +33,22 @@ describe('static methods', () => {
 
   scenario('adds hasMany relationships', () => {
     class TestClass extends RedwoodRecord {
-      static hasMany = ['posts']
+      static hasMany = [String]
     }
 
-    expect(TestClass.hasMany).toEqual(['posts'])
+    expect(TestClass.hasMany).toEqual([String])
+  })
+
+  scenario('defaults validates', () => {
+    expect(RedwoodRecord.validates).toEqual([])
+  })
+
+  scenario('adds validate directives', () => {
+    class TestClass extends RedwoodRecord {
+      static validates = [{ email: { email: true } }]
+    }
+
+    expect(TestClass.validates).toEqual([{ email: { email: true } }])
   })
 })
 
@@ -77,6 +89,12 @@ describe('instance methods', () => {
     const record = await User.find(scenario.user.rob.id)
 
     expect(typeof record.posts).toEqual('function')
+  })
+
+  scenario('isValid returns true when there are no validations', () => {
+    const record = new RedwoodRecord()
+
+    expect(record.isValid).toEqual(true)
   })
 })
 
@@ -308,8 +326,21 @@ describe('User subclass', () => {
         const user = new User(scenario.user.rob)
         const result = await user.update({ name: 'Robert Cameron' })
 
-        expect(result).toEqual(true)
+        expect(result instanceof User).toEqual(true)
         expect(user.name).toEqual('Robert Cameron')
+      })
+    })
+
+    describe('hasMany', () => {
+      scenario('fetches related records', async (scenario) => {
+        class Post extends RedwoodRecord {}
+        class User extends RedwoodRecord {
+          static hasMany = [Post]
+        }
+        const record = await User.find(scenario.user.rob.id)
+        const posts = await record.posts()
+
+        expect(posts[0].id).toEqual(scenario.post.rob.id)
       })
     })
   })

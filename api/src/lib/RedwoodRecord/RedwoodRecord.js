@@ -1,8 +1,8 @@
 import { db } from '../../lib/db'
 import camelCase from 'camelcase'
-import { pascalCase } from 'pascal-case'
 import pluralize from 'pluralize'
 import * as Errors from './errors'
+import { validate } from '@redwoodjs/api'
 
 export default class RedwoodRecord {
   // Set in child class to override DB accessor name. Leaving `undefined` will
@@ -23,6 +23,11 @@ export default class RedwoodRecord {
   //   static hasMany = ['posts']
   //   static hasMany = [{ 'comments': { 'foreignKey': 'owner' } }]
   static hasMany = []
+
+  // Denotes validations that need to run for the given fields. Must be in the
+  // form of { field: options } where `field` is the name of the field and
+  // `options` are the validation options.
+  static validates = []
 
   // Returns the Prisma DB accessor instance (ex. db.user)
   static get dbAccessor() {
@@ -98,6 +103,10 @@ export default class RedwoodRecord {
     return this.#errors
   }
 
+  get isValid() {
+    return this.#validate()
+  }
+
   async destroy(options = {}) {
     // try {
     await this.constructor.dbAccessor.delete({
@@ -140,9 +149,13 @@ export default class RedwoodRecord {
     return true
   }
 
-  update(attributes = {}, options = {}) {
+  async update(attributes = {}, options = {}) {
     this.#attributes = Object.assign(this.#attributes, attributes)
-    return this.save(options)
+    if (await this.save(options)) {
+      return this
+    } else {
+      return false
+    }
   }
 
   // Private instance methods
@@ -205,7 +218,8 @@ export default class RedwoodRecord {
   // to this.#errors messages, or throwing RedwoodRecord errors
   #saveErrorHandler(error, shouldThrow) {
     if (error.message.match(/Record to update not found/)) {
-      this.errors.base.push(
+      this.addError(
+        'base',
         `${this.constructor.name} record to update not found`
       )
       if (shouldThrow) {
@@ -213,13 +227,13 @@ export default class RedwoodRecord {
       }
     } else if (error.message.match(/must not be null/)) {
       const [_all, name] = error.message.match(/Argument (\w+)/)
-      this.errors[name].push('must not be null')
+      this.addError(name, 'must not be null')
       if (shouldThrow) {
         throw new Errors.RedwoodRecordNullAttributeError(name)
       }
     } else if (error.message.match(/is missing/)) {
       const [_all, name] = error.message.match(/Argument (\w+)/)
-      this.errors.base.push(`${name} is missing`)
+      this.addError('base', `${name} is missing`)
       if (shouldThrow) {
         throw new Errors.RedwoodRecordMissingAttributeError(name)
       }
@@ -231,6 +245,33 @@ export default class RedwoodRecord {
     for (const [attribute, _array] of Object.entries(this.#errors)) {
       this.#errors[attribute] = []
     }
+  }
+
+  // Adds an error to the #errors object
+  addError(attribute, message) {
+    this.#errors[attribute].push(message)
+  }
+
+  // Checks each field against validate directives. Creates errors if so and
+  // returns `false`, otherwise returns `true`.
+  #validate() {
+    // if there are no validations, then we're valid!
+    if (this.constructor.validates.length === 0) {
+      return true
+    }
+
+    const results = this.constructor.validates.collect((validation) => {
+      const { name, recipe } = validation
+      try {
+        validate(this[name], name, recipe)
+        return true
+      } catch (e) {
+        this.#errors[name].push(e.message)
+        return false
+      }
+    })
+
+    return results.every((result) => result)
   }
 
   #attributeGetter(name) {
