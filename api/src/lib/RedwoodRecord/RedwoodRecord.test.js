@@ -1,53 +1,82 @@
 import RedwoodRecord from './RedwoodRecord'
 import * as Errors from './errors'
+import { db } from '../db'
+
+global.modelDeleteOrder = ['Post', 'User']
 
 // General top level behavior of RedwoodRecord
 
 describe('static methods', () => {
-  test('returns the name of itself', () => {
+  scenario('returns the name of itself', () => {
     expect(RedwoodRecord.name).toEqual('RedwoodRecord')
   })
 
-  test('defaults `accessor` property to undefined', () => {
+  scenario('defaults `accessor` property to undefined', () => {
     expect(RedwoodRecord.accessor).toEqual(undefined)
   })
 
-  test('can override the accessor name if needed', () => {
+  scenario('can override the accessor name if needed', () => {
     class TestClass extends RedwoodRecord {
       static accessor = 'TesterTable'
     }
 
     expect(TestClass.accessor).toEqual('TesterTable')
   })
+
+  scenario('defaults `primaryKey`', () => {
+    expect(RedwoodRecord.primaryKey).toEqual('id')
+  })
+
+  scenario('defaults `hasMany`', () => {
+    expect(RedwoodRecord.hasMany).toEqual([])
+  })
+
+  scenario('adds hasMany relationships', () => {
+    class TestClass extends RedwoodRecord {
+      static hasMany = ['posts']
+    }
+
+    expect(TestClass.hasMany).toEqual(['posts'])
+  })
 })
 
 describe('instance methods', () => {
-  it('instantiates with a list of attributes', () => {
+  scenario('instantiates with a list of attributes', () => {
     const attrs = { foo: 'bar' }
     const record = new RedwoodRecord(attrs)
 
     expect(record.attributes).toEqual(attrs)
   })
 
-  it('creates getters for each attribute', () => {
+  scenario('creates getters for each attribute', () => {
     const record = new RedwoodRecord({ foo: 'bar' })
 
     expect(record.foo).toEqual('bar')
   })
 
-  it('creates setters for each attribute', () => {
+  scenario('creates setters for each attribute', () => {
     const record = new RedwoodRecord({ foo: 'bar' })
     record.foo = 'baz'
 
     expect(record.foo).toEqual('baz')
   })
 
-  it('instantiates with an error object', () => {
+  scenario('instantiates with an error object', () => {
     const attrs = { foo: 'bar' }
     const record = new RedwoodRecord(attrs)
 
     expect(record.errors.base).toEqual([])
     expect(record.errors.foo).toEqual([])
+  })
+
+  scenario.only('instantiates relationships methods', async (scenario) => {
+    class Post extends RedwoodRecord {}
+    class User extends RedwoodRecord {
+      static hasMany = [Post]
+    }
+    const record = new User()
+
+    expect(await record.posts()).toEqual([scenario.post.first])
   })
 })
 
@@ -73,17 +102,20 @@ describe('User subclass', () => {
     })
 
     describe('create', () => {
-      it('initializes and saves a new record from a list of attributes', async () => {
-        const user = await User.create({
-          email: 'peter@redwoodjs.com',
-          name: 'Peter Pistorius',
-        })
+      scenario(
+        'initializes and saves a new record from a list of attributes',
+        async () => {
+          const user = await User.create({
+            email: 'peter@redwoodjs.com',
+            name: 'Peter Pistorius',
+          })
 
-        expect(user instanceof User).toEqual(true)
-        expect(user.id).not.toEqual(undefined)
-        expect(user.email).toEqual('peter@redwoodjs.com')
-        expect(user.name).toEqual('Peter Pistorius')
-      })
+          expect(user instanceof User).toEqual(true)
+          expect(user.id).not.toEqual(undefined)
+          expect(user.email).toEqual('peter@redwoodjs.com')
+          expect(user.name).toEqual('Peter Pistorius')
+        }
+      )
     })
 
     describe('find', () => {
@@ -121,7 +153,11 @@ describe('User subclass', () => {
         }
       )
 
-      it('returns null if no records', async () => {
+      scenario('returns null if no records', async () => {
+        global.modelDeleteOrder.forEach(async (model) => {
+          await db.$executeRawUnsafe(`DELETE from "${model}"`)
+        })
+
         expect(await User.first()).toEqual(null)
       })
     })
@@ -130,7 +166,7 @@ describe('User subclass', () => {
   describe('instance methods', () => {
     describe('destroy', () => {
       scenario('deletes a record', async (scenario) => {
-        const user = new User(scenario.user.rob)
+        const user = new User(scenario.user.tom)
         await user.destroy()
 
         await expect(User.find(user.id)).rejects.toThrow(
@@ -141,28 +177,28 @@ describe('User subclass', () => {
 
     describe('save', () => {
       describe('create', () => {
-        it('returns true if create is successful', async () => {
+        scenario('returns true if create is successful', async () => {
           const user = new User({ email: `${Math.random()}@email.com` })
           const result = await user.save()
 
           expect(result).toEqual(true)
         })
 
-        it('returns false if create fails', async () => {
+        scenario('returns false if create fails', async () => {
           const user = new User()
           const result = await user.save()
 
           expect(result).toEqual(false)
         })
 
-        it('adds error if required field is missing', async () => {
+        scenario('adds error if required field is missing', async () => {
           const user = new User()
           await user.save()
 
           expect(user.errors.base).toEqual(['email is missing'])
         })
 
-        it('throws error if given the option', async () => {
+        scenario('throws error if given the option', async () => {
           const user = new User()
           try {
             await user.save({ throw: true })
@@ -244,6 +280,17 @@ describe('User subclass', () => {
             expect.assertions(1)
           }
         )
+
+        scenario('clears any errors after save', async (scenario) => {
+          const user = new User(scenario.user.rob)
+          user.email = null // email is required in schema
+          await user.save()
+          expect(user.errors.email).toEqual(['must not be null'])
+
+          user.email = `${Math.random()}@redwoodjs.com`
+          await user.save()
+          expect(user.errors.email).toEqual([])
+        })
       })
     })
 
