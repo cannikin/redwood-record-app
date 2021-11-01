@@ -4,12 +4,8 @@ export const users = () => {
   return User.all()
 }
 
-export const user = async ({ id }) => {
-  try {
-    return await User.find(id)
-  } catch (e) {
-    return null
-  }
+export const user = ({ id }) => {
+  return User.find(id)
 }
 
 export const createUser = ({ input }) => {
@@ -19,11 +15,11 @@ export const createUser = ({ input }) => {
 export const updateUser = async ({ id, input }) => {
   const user = await User.find(id)
   await user.update(input)
-  return user
+  return user.attributes
 }
 
 export const deleteUser = async ({ id }) => {
   const user = await User.find(id)
   await user.destroy()
-  return null
+  return user.attributes
 }
