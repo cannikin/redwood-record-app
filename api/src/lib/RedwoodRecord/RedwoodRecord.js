@@ -2,7 +2,7 @@ import { db } from '../../lib/db'
 import camelCase from 'camelcase'
 import pluralize from 'pluralize'
 import * as Errors from './errors'
-import { validate } from '@redwoodjs/api'
+import { validate as validateField } from '@redwoodjs/api'
 
 export default class RedwoodRecord {
   // Set in child class to override DB accessor name. Leaving `undefined` will
@@ -46,9 +46,7 @@ export default class RedwoodRecord {
   // Create a new record. Instantiates a new instance and then calls .save() on it
   static async create(attributes, options = {}) {
     const record = new this(attributes)
-    await record.save({ throw: options.throw })
-
-    return record
+    return await record.save(options)
   }
 
   // Returns the first record matching the given where, otherwise first in the
@@ -103,8 +101,31 @@ export default class RedwoodRecord {
     return this.#errors
   }
 
+  // Whether or not this instance contains an errors according to validation
+  // rules (opposite of `isValid`)
+  get hasError() {
+    let hasError = false
+
+    for (const [_name, errors] of Object.entries(this.#errors)) {
+      if (errors.length) {
+        hasError = true
+      }
+    }
+
+    return hasError
+  }
+
+  // Whether or not this instance is valid and has no errors (opposite of
+  // `hasError`)
   get isValid() {
-    return this.#validate()
+    this.validate()
+    return !this.hasError
+  }
+
+  // Adds an error to the #errors object. Can be called manually via instance,
+  // however any errors added this way will be wiped out if calling `validate()`
+  addError(attribute, message) {
+    this.#errors[attribute].push(message)
   }
 
   async destroy(options = {}) {
@@ -122,40 +143,71 @@ export default class RedwoodRecord {
 
   // Saves the attributes to the database
   async save(options = {}) {
-    const { id, ...saveAttributes } = this.attributes
-    try {
-      let newAttributes
+    if (this.validate({ throw: options.throw })) {
+      const { id, ...saveAttributes } = this.attributes
 
-      if (id) {
-        // update existing record
-        newAttributes = await this.constructor.dbAccessor.update({
-          where: { [this.constructor.primaryKey]: id },
-          data: saveAttributes,
-        })
-      } else {
-        // create new record
-        newAttributes = await this.constructor.dbAccessor.create({
-          data: saveAttributes,
-        })
+      try {
+        let newAttributes
+
+        if (id) {
+          // update existing record
+          newAttributes = await this.constructor.dbAccessor.update({
+            where: { [this.constructor.primaryKey]: id },
+            data: saveAttributes,
+          })
+        } else {
+          // create new record
+          newAttributes = await this.constructor.dbAccessor.create({
+            data: saveAttributes,
+          })
+        }
+
+        // update attributes in case someone else changed since we last read them
+        this.attributes = newAttributes
+      } catch (e) {
+        this.#saveErrorHandler(e, options.throw)
+        return false
       }
 
-      // update attributes in case someone else changed since we last read them
-      this.attributes = newAttributes
-      this.#clearErrors()
-    } catch (e) {
-      this.#saveErrorHandler(e, options.throw)
-      return false
-    }
-    return true
-  }
-
-  async update(attributes = {}, options = {}) {
-    this.#attributes = Object.assign(this.#attributes, attributes)
-    if (await this.save(options)) {
       return this
     } else {
       return false
     }
+  }
+
+  async update(attributes = {}, options = {}) {
+    this.#attributes = Object.assign(this.#attributes, attributes)
+    return await this.save(options)
+  }
+
+  // Checks each field against validate directives. Creates errors if so and
+  // returns `false`, otherwise returns `true`.
+  validate(options = {}) {
+    this.#clearErrors()
+
+    // if there are no validations, then we're valid!
+    if (this.constructor.validates.length === 0) {
+      return true
+    }
+
+    const results = this.constructor.validates.map((validation) => {
+      const name = Object.keys(validation)[0]
+      const recipe = Object.values(validation)[0]
+
+      try {
+        validateField(this[name], name, recipe)
+        return true
+      } catch (e) {
+        this.addError(name, e.message)
+        if (options.throw) {
+          throw e
+        } else {
+          return false
+        }
+      }
+    })
+
+    return results.every((result) => result)
   }
 
   // Private instance methods
@@ -245,33 +297,6 @@ export default class RedwoodRecord {
     for (const [attribute, _array] of Object.entries(this.#errors)) {
       this.#errors[attribute] = []
     }
-  }
-
-  // Adds an error to the #errors object
-  addError(attribute, message) {
-    this.#errors[attribute].push(message)
-  }
-
-  // Checks each field against validate directives. Creates errors if so and
-  // returns `false`, otherwise returns `true`.
-  #validate() {
-    // if there are no validations, then we're valid!
-    if (this.constructor.validates.length === 0) {
-      return true
-    }
-
-    const results = this.constructor.validates.collect((validation) => {
-      const { name, recipe } = validation
-      try {
-        validate(this[name], name, recipe)
-        return true
-      } catch (e) {
-        this.#errors[name].push(e.message)
-        return false
-      }
-    })
-
-    return results.every((result) => result)
   }
 
   #attributeGetter(name) {

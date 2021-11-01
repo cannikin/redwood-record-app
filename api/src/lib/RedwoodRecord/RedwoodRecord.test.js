@@ -80,22 +80,6 @@ describe('instance methods', () => {
     expect(record.errors.base).toEqual([])
     expect(record.errors.foo).toEqual([])
   })
-
-  scenario('instantiates hasMany relationships methods', async (scenario) => {
-    class Post extends RedwoodRecord {}
-    class User extends RedwoodRecord {
-      static hasMany = [Post]
-    }
-    const record = await User.find(scenario.user.rob.id)
-
-    expect(typeof record.posts).toEqual('function')
-  })
-
-  scenario('isValid returns true when there are no validations', () => {
-    const record = new RedwoodRecord()
-
-    expect(record.isValid).toEqual(true)
-  })
 })
 
 // Subclass behavior, needs to be backed by an actual model to work
@@ -184,6 +168,34 @@ describe('User subclass', () => {
   })
 
   describe('instance methods', () => {
+    describe('addError', () => {
+      scenario('can add an error on base', () => {
+        const record = new RedwoodRecord()
+        record.addError('base', 'base is not valid')
+
+        expect(record.errors.base).toEqual(['base is not valid'])
+      })
+
+      scenario('can add an error on a field', () => {
+        const record = new RedwoodRecord({ foo: 'bar' })
+        record.addError('foo', 'foo is not valid')
+
+        expect(record.errors.foo).toEqual(['foo is not valid'])
+      })
+    })
+
+    describe('create', () => {
+      scenario('can create a record', async () => {
+        const user = await User.create({
+          email: `${Math.random()}@redwoodjs.com`,
+          hashedPassword: 'abc',
+          salt: 'abc',
+        })
+
+        expect(user.id).not.toEqual(undefined)
+      })
+    })
+
     describe('destroy', () => {
       scenario('deletes a record', async (scenario) => {
         // delete posts ahead of time to avoid foreign key error
@@ -201,14 +213,16 @@ describe('User subclass', () => {
     describe('save', () => {
       describe('create', () => {
         scenario('returns true if create is successful', async () => {
+          const email = `${Math.random()}@email.com`
           const user = new User({
-            email: `${Math.random()}@email.com`,
+            email,
             hashedPassword: 'abc',
             salt: 'abc',
           })
           const result = await user.save()
 
-          expect(result).toEqual(true)
+          expect(result.id).not.toEqual(undefined)
+          expect(result.email).toEqual(email)
         })
 
         scenario('returns false if create fails', async () => {
@@ -242,10 +256,11 @@ describe('User subclass', () => {
       describe('update', () => {
         scenario('returns true if update is successful', async (scenario) => {
           const user = new User(scenario.user.rob)
+          const oldEmail = user.email
           user.email = 'updated@redwoodjs.com'
           const result = await user.save()
 
-          expect(result).toEqual(true)
+          expect(result.email).toEqual('updated@redwoodjs.com')
         })
 
         scenario('returns false if update fails', async (scenario) => {
@@ -308,7 +323,7 @@ describe('User subclass', () => {
           }
         )
 
-        scenario('clears any errors after save', async (scenario) => {
+        scenario.only('clears any errors after save', async (scenario) => {
           const user = new User(scenario.user.rob)
           user.email = null // email is required in schema
           await user.save()
@@ -328,19 +343,6 @@ describe('User subclass', () => {
 
         expect(result instanceof User).toEqual(true)
         expect(user.name).toEqual('Robert Cameron')
-      })
-    })
-
-    describe('hasMany', () => {
-      scenario('fetches related records', async (scenario) => {
-        class Post extends RedwoodRecord {}
-        class User extends RedwoodRecord {
-          static hasMany = [Post]
-        }
-        const record = await User.find(scenario.user.rob.id)
-        const posts = await record.posts()
-
-        expect(posts[0].id).toEqual(scenario.post.rob.id)
       })
     })
   })
