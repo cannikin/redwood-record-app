@@ -11,8 +11,8 @@ describe('static methods', () => {
     expect(RedwoodRecord.name).toEqual('RedwoodRecord')
   })
 
-  scenario('returns the connection object', () => {
-    expect(RedwoodRecord.connection).toEqual(db)
+  scenario('returns the db object', () => {
+    expect(RedwoodRecord.db).toEqual(db)
   })
 
   scenario('defaults `accessor` property to undefined', () => {

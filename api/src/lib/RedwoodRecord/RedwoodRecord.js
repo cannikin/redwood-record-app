@@ -50,13 +50,13 @@ export default class RedwoodRecord {
   static validates = []
 
   // Access the raw Prisma Client for doing low level query manipulation
-  static get connection() {
+  static get db() {
     return db
   }
 
   // Returns the Prisma DB accessor instance (ex. db.user)
   static get accessor() {
-    return this.connection[this.accessorName || camelCase(this.name)]
+    return this.db[this.accessorName || camelCase(this.name)]
   }
 
   // Find all records
