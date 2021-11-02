@@ -11,16 +11,20 @@ describe('static methods', () => {
     expect(RedwoodRecord.name).toEqual('RedwoodRecord')
   })
 
+  scenario('returns the connection object', () => {
+    expect(RedwoodRecord.connection).toEqual(db)
+  })
+
   scenario('defaults `accessor` property to undefined', () => {
-    expect(RedwoodRecord.accessor).toEqual(undefined)
+    expect(RedwoodRecord.accessorName).toEqual(undefined)
   })
 
   scenario('can override the accessor name if needed', () => {
     class TestClass extends RedwoodRecord {
-      static accessor = 'TesterTable'
+      static accessorName = 'TesterTable'
     }
 
-    expect(TestClass.accessor).toEqual('TesterTable')
+    expect(TestClass.accessorName).toEqual('TesterTable')
   })
 
   scenario('defaults `primaryKey`', () => {
@@ -88,6 +92,12 @@ class User extends RedwoodRecord {}
 
 describe('User subclass', () => {
   describe('static methods', () => {
+    describe('accessor', () => {
+      scenario('returns table representation on prisma client', () => {
+        expect(User.accessor).toEqual(db.user)
+      })
+    })
+
     describe('where', () => {
       scenario('returns an array of User records', async (scenario) => {
         const users = await User.where()

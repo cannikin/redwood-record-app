@@ -5,36 +5,40 @@ import * as Errors from './errors'
 import { validate as validateField } from '@redwoodjs/api'
 
 export default class RedwoodRecord {
-  // Set in child class to override DB accessor name. Leaving `undefined` will
-  // use the camelCase version of the class name itself as the accessor.
+  // Set in child class to override DB accessor name. This is the name of the
+  // property you would call on an instance of Prisma Client in order the query
+  // a model in your schema. ie. For the call `db.user` the accessorName is
+  // "user". Not setting this property will use the default camelCase version of
+  // the class name itself as the accessor.
   //
-  //   static accessor = 'userPreference'
-  static accessor
+  //   static accessorName = 'users'
+  static accessorName
 
-  // Set in child class to override primary key field name.
+  // Set in child class to override primary key field name for this model.
   //
   //   static primaryKey = 'userId'
   static primaryKey = 'id'
 
-  // Stores hasMany relatinoships to other models. Can be in the form of a
+  // Stores hasMany relationships to other models. Can be in the form of a
   // a class, which is the other model, or an object that has keys containing
   // several options:
   //
   // * model: the class for the other model
   // * name:  the name of the function that's added to an instance of this model
-  //          to access the related records: ie: user.posts() (defaults to
-  //          singular camelCase of the model name)
-  // * foreignKey: the name of the DB field that referneces back to this model,
-  //               ie. authorId in the Post table references the User table
+  //          to access the related records: ie: the name "blogPosts" would add
+  //          user.blogPosts() (defaults to singular camelCase of the model name)
+  // * foreignKey: the name of the DB field that references back to this model,
+  //               ie. "authorId" in the Post table references the User table
   //               (defaults to the camelCase name of this model with "Id" appended)
   //
   //   static hasMany = [Post]
-  //   static hasMany = [{ model: 'Post', name: 'blogPost', foreignKey: 'authorId' }]
+  //   static hasMany = [{ model: 'Post', name: 'posts', foreignKey: 'userId' }]
   static hasMany = []
 
   // Denotes validations that need to run for the given fields. Must be in the
   // form of { field: options } where `field` is the name of the field and
-  // `options` are the validation options:
+  // `options` are the validation options. See Service Validations docs for
+  // usage examples: https://redwoodjs.com/docs/services.html#service-validations
   //
   //   static validates = [{
   //     emailAddress: { email: true },
@@ -42,14 +46,19 @@ export default class RedwoodRecord {
   //   }]
   static validates = []
 
+  // Access the raw Prisma Client for doing low level query manipulation
+  static get connection() {
+    return db
+  }
+
   // Returns the Prisma DB accessor instance (ex. db.user)
-  static get dbAccessor() {
-    return db[this.accessor || camelCase(this.name)]
+  static get accessor() {
+    return this.connection[this.accessorName || camelCase(this.name)]
   }
 
   // Find all records
   static async where(options = {}) {
-    const records = await this.dbAccessor.findMany(options)
+    const records = await this.accessor.findMany(options)
 
     return records.map((record) => {
       return new this(record)
@@ -85,7 +94,7 @@ export default class RedwoodRecord {
   // Returns the first record matching the given `where`, otherwise first in the
   // whole table (whatever the DB determines is the first record)
   static async findBy(where, options = {}) {
-    const attributes = await this.dbAccessor.findFirst({
+    const attributes = await this.accessor.findFirst({
       where,
       ...options,
     })
@@ -154,7 +163,7 @@ export default class RedwoodRecord {
     delete options.throw
 
     // try {
-    await this.constructor.dbAccessor.delete({
+    await this.constructor.accessor.delete({
       where: { [this.constructor.primaryKey]: this.attributes.id },
       ...options,
     })
@@ -175,13 +184,13 @@ export default class RedwoodRecord {
 
         if (id) {
           // update existing record
-          newAttributes = await this.constructor.dbAccessor.update({
+          newAttributes = await this.constructor.accessor.update({
             where: { [this.constructor.primaryKey]: id },
             data: saveAttributes,
           })
         } else {
           // create new record
-          newAttributes = await this.constructor.dbAccessor.create({
+          newAttributes = await this.constructor.accessor.create({
             data: saveAttributes,
           })
         }
