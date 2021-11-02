@@ -48,12 +48,17 @@ export default class RedwoodRecord {
   }
 
   // Find all records
-  static async all(options = {}) {
+  static async where(options = {}) {
     const records = await this.dbAccessor.findMany(options)
 
     return records.map((record) => {
       return new this(record)
     })
+  }
+
+  // Alias for where()
+  static all(...args) {
+    return this.where(...args)
   }
 
   // Create a new record. Instantiates a new instance and then calls .save() on it
@@ -62,9 +67,24 @@ export default class RedwoodRecord {
     return await record.save(options)
   }
 
+  // Find a single record by ID.
+  static async find(id, options = {}) {
+    const record = await this.findBy(
+      {
+        [this.primaryKey]: id,
+      },
+      options
+    )
+    if (record === null) {
+      throw new Errors.RedwoodRecordNotFoundError(this.name)
+    } else {
+      return record
+    }
+  }
+
   // Returns the first record matching the given `where`, otherwise first in the
   // whole table (whatever the DB determines is the first record)
-  static async first(where, options = {}) {
+  static async findBy(where, options = {}) {
     const attributes = await this.dbAccessor.findFirst({
       where,
       ...options,
@@ -73,18 +93,9 @@ export default class RedwoodRecord {
     return attributes ? new this(attributes) : null
   }
 
-  // Find a single record by ID.
-  static async find(id, options = {}) {
-    const attributes = await this.dbAccessor.findUnique({
-      where: {
-        [this.primaryKey]: id,
-      },
-      ...options,
-    })
-    if (attributes === null) {
-      throw new Errors.RedwoodRecordNotFoundError(this.name)
-    }
-    return new this(attributes)
+  // Alias for findBy
+  static async first(...args) {
+    return this.findBy(...args)
   }
 
   // Private instance properties
@@ -140,6 +151,8 @@ export default class RedwoodRecord {
   }
 
   async destroy(options = {}) {
+    delete options.throw
+
     // try {
     await this.constructor.dbAccessor.delete({
       where: { [this.constructor.primaryKey]: this.attributes.id },
@@ -149,7 +162,7 @@ export default class RedwoodRecord {
     //   return false
     // }
 
-    return true
+    return this
   }
 
   // Saves the attributes to the database

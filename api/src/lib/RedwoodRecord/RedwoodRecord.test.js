@@ -88,9 +88,9 @@ class User extends RedwoodRecord {}
 
 describe('User subclass', () => {
   describe('static methods', () => {
-    describe('all', () => {
+    describe('where', () => {
       scenario('returns an array of User records', async (scenario) => {
-        const users = await User.all()
+        const users = await User.where()
         const ids = users.map((u) => u.id)
 
         // tests that every user is an instance of User and its ID is in the list
@@ -100,6 +100,12 @@ describe('User subclass', () => {
             return user instanceof User && ids.includes(user.id)
           })
         ).toEqual(true)
+      })
+    })
+
+    describe('all', () => {
+      scenario('is an alias for where', async (scenario) => {
+        expect(await User.all()).toEqual(await User.where())
       })
     })
 
@@ -141,9 +147,9 @@ describe('User subclass', () => {
       })
     })
 
-    describe('first', () => {
+    describe('findBy', () => {
       scenario('returns the first record if no where', async (scenario) => {
-        const user = await User.first()
+        const user = await User.findBy()
 
         expect(user.id).toEqual(scenario.user.rob.id)
       })
@@ -151,7 +157,7 @@ describe('User subclass', () => {
       scenario(
         'returns the first record that matches the given attributes',
         async (scenario) => {
-          const user = await User.first({ email: 'tom@redwoodjs.com' })
+          const user = await User.findBy({ email: 'tom@redwoodjs.com' })
 
           expect(user.id).toEqual(scenario.user.tom.id)
         }
@@ -162,7 +168,15 @@ describe('User subclass', () => {
           await db.$executeRawUnsafe(`DELETE from "${model}"`)
         })
 
-        expect(await User.first()).toEqual(null)
+        expect(await User.findBy()).toEqual(null)
+      })
+    })
+
+    describe('first', () => {
+      scenario('is an alias for findBy', async (scenario) => {
+        expect(await User.first({ email: scenario.user.rob.email })).toEqual(
+          await User.findBy({ email: scenario.user.rob.email })
+        )
       })
     })
   })
