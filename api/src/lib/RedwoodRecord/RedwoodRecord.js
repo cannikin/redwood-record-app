@@ -62,7 +62,7 @@ export default class RedwoodRecord {
     return await record.save(options)
   }
 
-  // Returns the first record matching the given where, otherwise first in the
+  // Returns the first record matching the given `where`, otherwise first in the
   // whole table (whatever the DB determines is the first record)
   static async first(where, options = {}) {
     const attributes = await this.dbAccessor.findFirst({
@@ -89,7 +89,9 @@ export default class RedwoodRecord {
 
   // Private instance properties
 
+  // Stores error messages internally
   #errors = { base: [] }
+  // Stores instance attributes object internall
   #attributes = {}
 
   // Public instance methods
@@ -117,15 +119,9 @@ export default class RedwoodRecord {
   // Whether or not this instance contains an errors according to validation
   // rules (opposite of `isValid`)
   get hasError() {
-    let hasError = false
-
-    for (const [_name, errors] of Object.entries(this.#errors)) {
-      if (errors.length) {
-        hasError = true
-      }
-    }
-
-    return hasError
+    return !Object.entries(this.#errors).every(
+      ([_name, errors]) => !errors.length
+    )
   }
 
   // Whether or not this instance is valid and has no errors (opposite of

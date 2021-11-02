@@ -323,7 +323,7 @@ describe('User subclass', () => {
           }
         )
 
-        scenario.only('clears any errors after save', async (scenario) => {
+        scenario('clears any errors after save', async (scenario) => {
           const user = new User(scenario.user.rob)
           user.email = null // email is required in schema
           await user.save()
