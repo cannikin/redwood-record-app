@@ -17,16 +17,28 @@ export default class RedwoodRecord {
   static primaryKey = 'id'
 
   // Stores hasMany relatinoships to other models. Can be in the form of a
-  // a string which is the name of the relationship, or an object that has a key
-  // that is the name of the relationships and an object containing options.
+  // a class, which is the other model, or an object that has keys containing
+  // several options:
   //
-  //   static hasMany = ['posts']
-  //   static hasMany = [{ 'comments': { 'foreignKey': 'owner' } }]
+  // * model: the class for the other model
+  // * name:  the name of the accessor on the PrismaClient, ie. 'blogPost'
+  //          for db.blogPost, (defaults to singular camelCase of the model name)
+  // * foreignKey: the name of the DB field that referneces back to this model,
+  //               ie. authorId in the Post table references the User table
+  //               (defaults to the camelCase name of this model with "Id" appended
+  //
+  //   static hasMany = [Post]
+  //   static hasMany = [{ model: 'Post', name: 'blogPost', foreignKey: 'authorId' }]
   static hasMany = []
 
   // Denotes validations that need to run for the given fields. Must be in the
   // form of { field: options } where `field` is the name of the field and
-  // `options` are the validation options.
+  // `options` are the validation options:
+  //
+  //   static validates = [{
+  //     emailAddress: { email: true },
+  //     name: { presence: true, length: { min: 2, max: 255 } }
+  //   }]
   static validates = []
 
   // Returns the Prisma DB accessor instance (ex. db.user)
