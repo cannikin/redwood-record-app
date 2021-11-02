@@ -14,12 +14,10 @@ export const createPost = ({ input }) => {
 
 export const updatePost = async ({ id, input }) => {
   const post = await Post.find(id)
-  await post.update(input)
-  return post.attributes
+  return post.update(input)
 }
 
 export const deletePost = async ({ id }) => {
   const post = await Post.find(id)
-  post.destroy()
-  return post.attributes
+  return post.destroy()
 }
