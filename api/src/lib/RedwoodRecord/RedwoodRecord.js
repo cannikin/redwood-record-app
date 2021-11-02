@@ -1,8 +1,11 @@
-import { db } from '../../lib/db'
+import { validate as validateField } from '@redwoodjs/api'
 import camelCase from 'camelcase'
 import pluralize from 'pluralize'
+
+import { db } from '../../lib/db'
+
 import * as Errors from './errors'
-import { validate as validateField } from '@redwoodjs/api'
+import RedwoodRecordRelationProxy from './RedwoodRecordRelationProxy'
 
 export default class RedwoodRecord {
   // Set in child class to override DB accessor name. This is the name of the
@@ -81,6 +84,7 @@ export default class RedwoodRecord {
     const record = await this.findBy(
       {
         [this.primaryKey]: id,
+        ...(options.where || {}),
       },
       options
     )
@@ -111,6 +115,7 @@ export default class RedwoodRecord {
 
   // Stores error messages internally
   #errors = { base: [] }
+
   // Stores instance attributes object internall
   #attributes = {}
 
@@ -292,7 +297,9 @@ export default class RedwoodRecord {
 
       Object.defineProperty(this, name, {
         get() {
-          return () => model.all({ where: { [foreignKey]: this.id } })
+          return new RedwoodRecordRelationProxy(model, {
+            where: { [foreignKey]: this.id },
+          })
         },
         enumerable: true,
       })
