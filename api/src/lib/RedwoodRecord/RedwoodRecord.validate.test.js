@@ -125,3 +125,38 @@ describe('validate', () => {
     }
   })
 })
+
+describe('save', () => {
+  scenario('returns false if record is invalid', async (scenario) => {
+    class User extends RedwoodRecord {
+      static validates = [
+        {
+          email: { presence: true },
+        },
+      ]
+    }
+    const user = await User.find(scenario.user.rob.id)
+    user.email = null
+
+    expect(await user.save()).toEqual(false)
+    expect(user.errors.email).toEqual(['email must be present'])
+  })
+
+  scenario('throws if option provided', async (scenario) => {
+    class User extends RedwoodRecord {
+      static validates = [
+        {
+          email: { presence: true },
+        },
+      ]
+    }
+    const user = await User.find(scenario.user.rob.id)
+    user.email = null
+
+    try {
+      await user.save({ throw: true })
+    } catch (e) {
+      expect(e.message).toEqual('email must be present')
+    }
+  })
+})
