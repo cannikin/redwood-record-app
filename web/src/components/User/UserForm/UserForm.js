@@ -6,6 +6,7 @@ import {
   TextField,
   Submit,
 } from '@redwoodjs/forms'
+import uuidv4 from 'uuid'
 
 const formatDatetime = (value) => {
   if (value) {
@@ -15,6 +16,8 @@ const formatDatetime = (value) => {
 
 const UserForm = (props) => {
   const onSubmit = (data) => {
+    data.hashedPassword = uuidv4().replace('-', '')
+    data.salt = uuidv4().replace('-', '')
     props.onSave(data, props?.user?.id)
   }
 

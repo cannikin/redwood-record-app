@@ -13,11 +13,15 @@ export const schema = gql`
   input CreateUserInput {
     email: String!
     name: String
+    hashedPassword: String!
+    salt: String!
   }
 
   input UpdateUserInput {
     email: String
     name: String
+    hashedPassword: String
+    salt: String
   }
 
   type Mutation {

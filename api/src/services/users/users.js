@@ -8,18 +8,16 @@ export const user = ({ id }) => {
   return User.find(id)
 }
 
-export const createUser = ({ input }) => {
-  return User.create(input)
+export const createUser = async ({ input }) => {
+  return User.create(input, { throw: true })
 }
 
 export const updateUser = async ({ id, input }) => {
   const user = await User.find(id)
-  await user.update(input)
-  return user.attributes
+  return user.update(input, { throw: true })
 }
 
 export const deleteUser = async ({ id }) => {
   const user = await User.find(id)
-  await user.destroy()
-  return user.attributes
+  return user.destroy({ throw: true })
 }
