@@ -21,11 +21,12 @@ export default class RedwoodRecord {
   // several options:
   //
   // * model: the class for the other model
-  // * name:  the name of the accessor on the PrismaClient, ie. 'blogPost'
-  //          for db.blogPost, (defaults to singular camelCase of the model name)
+  // * name:  the name of the function that's added to an instance of this model
+  //          to access the related records: ie: user.posts() (defaults to
+  //          singular camelCase of the model name)
   // * foreignKey: the name of the DB field that referneces back to this model,
   //               ie. authorId in the Post table references the User table
-  //               (defaults to the camelCase name of this model with "Id" appended
+  //               (defaults to the camelCase name of this model with "Id" appended)
   //
   //   static hasMany = [Post]
   //   static hasMany = [{ model: 'Post', name: 'blogPost', foreignKey: 'authorId' }]
