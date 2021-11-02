@@ -116,16 +116,18 @@ export default class RedwoodRecord {
     return this.#errors
   }
 
-  // Whether or not this instance contains an errors according to validation
-  // rules (opposite of `isValid`)
+  // Whether or not this instance contains any errors according to validation
+  // rules. Does not run valiations, (and so preserves custom errors) returns
+  // the state of error objects. Essentially the opposite of `isValid`.
   get hasError() {
     return !Object.entries(this.#errors).every(
       ([_name, errors]) => !errors.length
     )
   }
 
-  // Whether or not this instance is valid and has no errors (opposite of
-  // `hasError`)
+  // Whether or not this instance is valid and has no errors. Essentially the
+  // opposite of `hasError`, but runs validations first. This means it will
+  // reset any custom errors added with `addError()`
   get isValid() {
     this.validate()
     return !this.hasError
