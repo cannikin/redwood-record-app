@@ -21,6 +21,14 @@ const HomePage = () => {
         My default route is named <code>home</code>, link to me with `
         <Link to={routes.home()}>Home</Link>`
       </p>
+      <ul>
+        <li>
+          <Link to={routes.users()}>Users Admin</Link>
+        </li>
+        <li>
+          <Link to={routes.posts()}>Posts Admin</Link>
+        </li>
+      </ul>
 
       {isAuthenticated ? (
         <p>
