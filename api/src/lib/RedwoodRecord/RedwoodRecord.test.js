@@ -100,16 +100,10 @@ describe('User subclass', () => {
 
     describe('where', () => {
       scenario('returns an array of User records', async (scenario) => {
-        const users = await User.where()
-        const ids = users.map((u) => u.id)
+        const users = await User.where({ email: scenario.user.rob.email })
 
-        // tests that every user is an instance of User and its ID is in the list
-        // of all IDs in the database
-        expect(
-          users.every((user) => {
-            return user instanceof User && ids.includes(user.id)
-          })
-        ).toEqual(true)
+        expect(users.length).toEqual(1)
+        expect(users[0].id).toEqual(scenario.user.rob.id)
       })
     })
 

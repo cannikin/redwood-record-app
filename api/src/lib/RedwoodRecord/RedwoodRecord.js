@@ -59,15 +59,6 @@ export default class RedwoodRecord {
     return this.db[this.accessorName || camelCase(this.name)]
   }
 
-  // Find all records
-  static async where(options = {}) {
-    const records = await this.accessor.findMany(options)
-
-    return records.map((record) => {
-      return new this(record)
-    })
-  }
-
   // Alias for where()
   static all(...args) {
     return this.where(...args)
@@ -76,6 +67,7 @@ export default class RedwoodRecord {
   // Create a new record. Instantiates a new instance and then calls .save() on it
   static async create(attributes, options = {}) {
     const record = new this(attributes)
+
     return await record.save(options)
   }
 
@@ -97,18 +89,30 @@ export default class RedwoodRecord {
 
   // Returns the first record matching the given `where`, otherwise first in the
   // whole table (whatever the DB determines is the first record)
-  static async findBy(where, options = {}) {
-    const attributes = await this.accessor.findFirst({
-      where,
+  static async findBy(attributes, options = {}) {
+    const record = await this.accessor.findFirst({
+      where: attributes,
       ...options,
     })
 
-    return attributes ? new this(attributes) : null
+    return record ? new this(record) : null
   }
 
   // Alias for findBy
   static async first(...args) {
     return this.findBy(...args)
+  }
+
+  // Find all records
+  static async where(attributes, options = {}) {
+    const records = await this.accessor.findMany({
+      where: attributes,
+      ...options,
+    })
+
+    return records.map((record) => {
+      return new this(record)
+    })
   }
 
   // Private instance properties

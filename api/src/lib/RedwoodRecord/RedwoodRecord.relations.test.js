@@ -40,4 +40,11 @@ describe('hasMany', () => {
 
     expect(post.id).toEqual(scenario.post.rob.id)
   })
+
+  scenario('fetches related records with findBy()', async (scenario) => {
+    const record = await User.find(scenario.user.rob.id)
+    const post = await record.posts.findBy({ title: scenario.post.rob.title })
+
+    expect(post.id).toEqual(scenario.post.rob.id)
+  })
 })

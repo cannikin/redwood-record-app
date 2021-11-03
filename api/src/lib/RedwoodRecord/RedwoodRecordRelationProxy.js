@@ -1,16 +1,13 @@
 // Proxies access to a related model. Stores the requirements for the relation,
 // so that any function called on it is called on the original model, but with
-//
+// the relations attributes automatically merged in.
+
 export default class RedwoodRecordRelationProxy {
   constructor(model, relation) {
+    // Stores the model this proxy is proxying
     this.model = model
+    // Stores the relation attributes, like `{ userId: 123 }`
     this.relation = relation
-  }
-
-  where(whereSelector, options = {}) {
-    const relatedWhere = { whereSelector, ...this.relation.where }
-
-    return this.model.all({ where: relatedWhere }, options)
   }
 
   all(...args) {
@@ -24,12 +21,25 @@ export default class RedwoodRecordRelationProxy {
   }
 
   find(id, options = {}) {
-    const relatedWhere = {
-      [this.model.primaryKey]: id, // primary key
-      ...(options.where || {}), // any additional `where` clause
-      ...this.relation.where, // foreignKey relation
+    return this.findBy({ [this.model.primaryKey]: id }, options)
+  }
+
+  findBy(attributes, options = {}) {
+    const relatedAttributes = {
+      ...attributes,
+      ...this.relation.where,
     }
 
-    return this.model.findBy(relatedWhere)
+    return this.model.findBy(relatedAttributes, options)
+  }
+
+  first(...args) {
+    return this.findBy(...args)
+  }
+
+  where(attributes, options = {}) {
+    const relatedAttributes = { ...attributes, ...this.relation.where }
+
+    return this.model.where(relatedAttributes, options)
   }
 }
