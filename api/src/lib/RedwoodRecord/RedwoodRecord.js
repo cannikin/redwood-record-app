@@ -9,6 +9,10 @@ import RedwoodRecordReflection from './RedwoodRecordReflection'
 import RedwoodRecordRelationProxy from './RedwoodRecordRelationProxy'
 
 export default class RedwoodRecord {
+  ////////////////////////////
+  // Public class properties
+  ////////////////////////////
+
   // Set in child class to override DB accessor name. This is the name of the
   // property you would call on an instance of Prisma Client in order the query
   // a model in your schema. ie. For the call `db.user` the accessorName is
@@ -33,6 +37,10 @@ export default class RedwoodRecord {
   //     name: { presence: true, length: { min: 2, max: 255 } }
   //   }]
   static validates = []
+
+  /////////////////////////
+  // Public class methods
+  /////////////////////////
 
   // Access the raw Prisma Client for doing low level query manipulation
   static get db() {
@@ -113,15 +121,93 @@ export default class RedwoodRecord {
     )
   }
 
+  ///////////////////////////////
   // Private instance properties
+  ///////////////////////////////
 
   // Stores error messages internally
   #errors = { base: [] }
 
-  // Stores instance attributes object internall
+  // Stores instance attributes object internally
   #attributes = {}
 
+  ////////////////////////////
+  // Private instance methods
+  ////////////////////////////
+
+  // Turns a plain object's properties into getters/setters on the instance:
+  //
+  // const user = new User({ name: 'Rob' })
+  // user.name  // => 'Rob'
+  #createPropertiesForAttributes() {
+    for (const [name, _value] of Object.entries(this.attributes)) {
+      // eslint-disable-next-line
+      if (!this.hasOwnProperty(name)) {
+        Object.defineProperty(this, name, {
+          get() {
+            return this.#attributeGetter(name)
+          },
+          set(value) {
+            this.#attributeSetter(name, value)
+          },
+          enumerable: true,
+        })
+        this.#errors[name] = []
+      }
+    }
+  }
+
+  // Handles errors from saving a record (either update or create), converting
+  // to this.#errors messages, or throwing RedwoodRecord errors
+  #saveErrorHandler(error, shouldThrow) {
+    if (error.message.match(/Record to update not found/)) {
+      this.addError(
+        'base',
+        `${this.constructor.name} record to update not found`
+      )
+      if (shouldThrow) {
+        throw new Errors.RedwoodRecordNotFoundError(this.constructor.name)
+      }
+    } else if (error.message.match(/must not be null/)) {
+      const [_all, name] = error.message.match(/Argument (\w+)/)
+      this.addError(name, 'must not be null')
+      if (shouldThrow) {
+        throw new Errors.RedwoodRecordNullAttributeError(name)
+      }
+    } else if (error.message.match(/is missing/)) {
+      const [_all, name] = error.message.match(/Argument (\w+)/)
+      this.addError('base', `${name} is missing`)
+      if (shouldThrow) {
+        throw new Errors.RedwoodRecordMissingAttributeError(name)
+      }
+    }
+  }
+
+  // Removes all error messages.
+  #clearErrors() {
+    for (const [attribute, _array] of Object.entries(this.#errors)) {
+      this.#errors[attribute] = []
+    }
+  }
+
+  #attributeGetter(name) {
+    return this.#attributes[name]
+  }
+
+  #attributeSetter(name, value) {
+    return (this.#attributes[name] = value)
+  }
+
+  #defaultHasManyOptions(model) {
+    return {
+      name: camelCase(pluralize(model.name)),
+      foreignKey: `${camelCase(this.constructor.name)}Id`,
+    }
+  }
+
+  ////////////////////////////
   // Public instance methods
+  ////////////////////////////
 
   constructor() {}
 
@@ -245,77 +331,5 @@ export default class RedwoodRecord {
     })
 
     return results.every((result) => result)
-  }
-
-  // Private instance methods
-
-  // Turns a plain object's properties into getters/setters on the instance:
-  //
-  // const user = new User({ name: 'Rob' })
-  // user.name  // => 'Rob'
-  #createPropertiesForAttributes() {
-    for (const [name, _value] of Object.entries(this.attributes)) {
-      // eslint-disable-next-line
-      if (!this.hasOwnProperty(name)) {
-        Object.defineProperty(this, name, {
-          get() {
-            return this.#attributeGetter(name)
-          },
-          set(value) {
-            this.#attributeSetter(name, value)
-          },
-          enumerable: true,
-        })
-        this.#errors[name] = []
-      }
-    }
-  }
-
-  // Handles errors from saving a record (either update or create), converting
-  // to this.#errors messages, or throwing RedwoodRecord errors
-  #saveErrorHandler(error, shouldThrow) {
-    if (error.message.match(/Record to update not found/)) {
-      this.addError(
-        'base',
-        `${this.constructor.name} record to update not found`
-      )
-      if (shouldThrow) {
-        throw new Errors.RedwoodRecordNotFoundError(this.constructor.name)
-      }
-    } else if (error.message.match(/must not be null/)) {
-      const [_all, name] = error.message.match(/Argument (\w+)/)
-      this.addError(name, 'must not be null')
-      if (shouldThrow) {
-        throw new Errors.RedwoodRecordNullAttributeError(name)
-      }
-    } else if (error.message.match(/is missing/)) {
-      const [_all, name] = error.message.match(/Argument (\w+)/)
-      this.addError('base', `${name} is missing`)
-      if (shouldThrow) {
-        throw new Errors.RedwoodRecordMissingAttributeError(name)
-      }
-    }
-  }
-
-  // Removes all error messages.
-  #clearErrors() {
-    for (const [attribute, _array] of Object.entries(this.#errors)) {
-      this.#errors[attribute] = []
-    }
-  }
-
-  #attributeGetter(name) {
-    return this.#attributes[name]
-  }
-
-  #attributeSetter(name, value) {
-    return (this.#attributes[name] = value)
-  }
-
-  #defaultHasManyOptions(model) {
-    return {
-      name: camelCase(pluralize(model.name)),
-      foreignKey: `${camelCase(this.constructor.name)}Id`,
-    }
   }
 }
