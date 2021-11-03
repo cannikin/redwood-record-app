@@ -5,6 +5,7 @@ import pluralize from 'pluralize'
 import { db } from '../../lib/db'
 
 import * as Errors from './errors'
+import RedwoodRecordReflection from './RedwoodRecordReflection'
 import RedwoodRecordRelationProxy from './RedwoodRecordRelationProxy'
 
 export default class RedwoodRecord {
@@ -101,6 +102,10 @@ export default class RedwoodRecord {
   // Alias for findBy
   static async first(...args) {
     return this.findBy(...args)
+  }
+
+  static get reflect() {
+    return new RedwoodRecordReflection(this.constructor.name)
   }
 
   // Find all records
@@ -283,7 +288,7 @@ export default class RedwoodRecord {
   // static hasMany = [Post]
   // static hasMany = [{ model: Post, name: 'posts', foreignKey: 'userId' }]
   // user.posts() // => [Post, Post, Post]
-  #createPropertiesForRelationships() {
+  async #createPropertiesForRelationships() {
     this.constructor.hasMany.forEach((relationship) => {
       let model, name, foreignKey, defaults
 

@@ -1,4 +1,5 @@
 import RedwoodRecord from './RedwoodRecord'
+import RedwoodRecordReflection from './RedwoodRecordReflection'
 import * as Errors from './errors'
 import { db } from '../db'
 
@@ -41,6 +42,12 @@ describe('static methods', () => {
     }
 
     expect(TestClass.hasMany).toEqual([String])
+  })
+
+  scenario('reflect returns instance of RedwoodRecordReflection', () => {
+    expect(RedwoodRecord.reflect instanceof RedwoodRecordReflection).toEqual(
+      true
+    )
   })
 
   scenario('defaults validates', () => {
