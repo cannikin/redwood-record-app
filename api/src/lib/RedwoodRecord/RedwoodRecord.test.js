@@ -32,18 +32,6 @@ describe('static methods', () => {
     expect(RedwoodRecord.primaryKey).toEqual('id')
   })
 
-  scenario('defaults `hasMany`', () => {
-    expect(RedwoodRecord.hasMany).toEqual([])
-  })
-
-  scenario('adds hasMany relationships', () => {
-    class TestClass extends RedwoodRecord {
-      static hasMany = [String]
-    }
-
-    expect(TestClass.hasMany).toEqual([String])
-  })
-
   scenario('reflect returns instance of RedwoodRecordReflection', () => {
     expect(RedwoodRecord.reflect instanceof RedwoodRecordReflection).toEqual(
       true
@@ -64,29 +52,29 @@ describe('static methods', () => {
 })
 
 describe('instance methods', () => {
-  scenario('instantiates with a list of attributes', () => {
+  scenario('instantiates with a list of attributes', async () => {
     const attrs = { foo: 'bar' }
-    const record = new RedwoodRecord(attrs)
+    const record = await RedwoodRecord.build(attrs)
 
     expect(record.attributes).toEqual(attrs)
   })
 
-  scenario('creates getters for each attribute', () => {
-    const record = new RedwoodRecord({ foo: 'bar' })
+  scenario('creates getters for each attribute', async () => {
+    const record = await RedwoodRecord.build({ foo: 'bar' })
 
     expect(record.foo).toEqual('bar')
   })
 
-  scenario('creates setters for each attribute', () => {
-    const record = new RedwoodRecord({ foo: 'bar' })
+  scenario('creates setters for each attribute', async () => {
+    const record = await RedwoodRecord.build({ foo: 'bar' })
     record.foo = 'baz'
 
     expect(record.foo).toEqual('baz')
   })
 
-  scenario('instantiates with an error object', () => {
+  scenario('instantiates with an error object', async () => {
     const attrs = { foo: 'bar' }
-    const record = new RedwoodRecord(attrs)
+    const record = await RedwoodRecord.build(attrs)
 
     expect(record.errors.base).toEqual([])
     expect(record.errors.foo).toEqual([])
@@ -194,15 +182,15 @@ describe('User subclass', () => {
 
   describe('instance methods', () => {
     describe('addError', () => {
-      scenario('can add an error on base', () => {
-        const record = new RedwoodRecord()
+      scenario('can add an error on base', async () => {
+        const record = await RedwoodRecord.build()
         record.addError('base', 'base is not valid')
 
         expect(record.errors.base).toEqual(['base is not valid'])
       })
 
-      scenario('can add an error on a field', () => {
-        const record = new RedwoodRecord({ foo: 'bar' })
+      scenario('can add an error on a field', async () => {
+        const record = await RedwoodRecord.build({ foo: 'bar' })
         record.addError('foo', 'foo is not valid')
 
         expect(record.errors.foo).toEqual(['foo is not valid'])
@@ -226,7 +214,7 @@ describe('User subclass', () => {
         // delete posts ahead of time to avoid foreign key error
         await db.$executeRawUnsafe(`DELETE from "Post"`)
 
-        const user = new User(scenario.user.tom)
+        const user = await User.build(scenario.user.tom)
         await user.destroy()
 
         await expect(User.find(user.id)).rejects.toThrow(
@@ -239,7 +227,7 @@ describe('User subclass', () => {
       describe('create', () => {
         scenario('returns true if create is successful', async () => {
           const email = `${Math.random()}@email.com`
-          const user = new User({
+          const user = await User.build({
             email,
             hashedPassword: 'abc',
             salt: 'abc',
@@ -251,21 +239,21 @@ describe('User subclass', () => {
         })
 
         scenario('returns false if create fails', async () => {
-          const user = new User()
+          const user = await User.build()
           const result = await user.save()
 
           expect(result).toEqual(false)
         })
 
         scenario('adds error if required field is missing', async () => {
-          const user = new User()
+          const user = await User.build()
           await user.save()
 
           expect(user.errors.base).toEqual(['email is missing'])
         })
 
         scenario('throws error if given the option', async () => {
-          const user = new User()
+          const user = await User.build()
           try {
             await user.save({ throw: true })
           } catch (e) {
@@ -280,7 +268,7 @@ describe('User subclass', () => {
 
       describe('update', () => {
         scenario('returns true if update is successful', async (scenario) => {
-          const user = new User(scenario.user.rob)
+          const user = await User.build(scenario.user.rob)
           const oldEmail = user.email
           user.email = 'updated@redwoodjs.com'
           const result = await user.save()
@@ -289,7 +277,7 @@ describe('User subclass', () => {
         })
 
         scenario('returns false if update fails', async (scenario) => {
-          const user = new User(scenario.user.rob)
+          const user = await User.build(scenario.user.rob)
           user.id = 999999999
           const result = await user.save()
 
@@ -299,7 +287,7 @@ describe('User subclass', () => {
         scenario(
           'throws on failed save if given the option',
           async (scenario) => {
-            const user = new User(scenario.user.rob)
+            const user = await User.build(scenario.user.rob)
             user.id = 999999999
 
             try {
@@ -315,7 +303,7 @@ describe('User subclass', () => {
         )
 
         scenario('adds error to `base` if id not found', async (scenario) => {
-          const user = new User(scenario.user.rob)
+          const user = await User.build(scenario.user.rob)
           user.id = 999999999
           await user.save()
 
@@ -323,7 +311,7 @@ describe('User subclass', () => {
         })
 
         scenario('catches null required field errors', async (scenario) => {
-          const user = new User(scenario.user.rob)
+          const user = await User.build(scenario.user.rob)
           user.email = null // email is required in schema
           await user.save()
 
@@ -333,7 +321,7 @@ describe('User subclass', () => {
         scenario(
           'throws on null required field if given the option',
           async (scenario) => {
-            const user = new User(scenario.user.rob)
+            const user = await User.build(scenario.user.rob)
             user.email = null // email is required in schema
 
             try {
@@ -349,7 +337,7 @@ describe('User subclass', () => {
         )
 
         scenario('clears any errors after save', async (scenario) => {
-          const user = new User(scenario.user.rob)
+          const user = await User.build(scenario.user.rob)
           user.email = null // email is required in schema
           await user.save()
           expect(user.errors.email).toEqual(['must not be null'])
@@ -363,7 +351,7 @@ describe('User subclass', () => {
 
     describe('update', () => {
       scenario('updates an existing record with new data', async (scenario) => {
-        const user = new User(scenario.user.rob)
+        const user = await User.build(scenario.user.rob)
         const result = await user.update({ name: 'Robert Cameron' })
 
         expect(result instanceof User).toEqual(true)

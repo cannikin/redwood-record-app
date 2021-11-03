@@ -3,28 +3,28 @@ import RedwoodRecord from './RedwoodRecord'
 global.modelDeleteOrder = ['Post', 'User']
 
 describe('hasError', () => {
-  scenario('defaults to false', () => {
-    const record = new RedwoodRecord()
+  scenario('defaults to false', async () => {
+    const record = await RedwoodRecord.build()
 
     expect(record.hasError).toEqual(false)
   })
 
-  scenario('returns true if there are base errors', () => {
-    const record = new RedwoodRecord()
+  scenario('returns true if there are base errors', async () => {
+    const record = await RedwoodRecord.build()
     record.addError('base', 'base is invalid')
 
     expect(record.hasError).toEqual(true)
   })
 
-  scenario('returns true if there are field errors', () => {
-    const record = new RedwoodRecord({ foo: 'bar' })
+  scenario('returns true if there are field errors', async () => {
+    const record = await RedwoodRecord.build({ foo: 'bar' })
     record.addError('foo', 'foo is invalid')
 
     expect(record.hasError).toEqual(true)
   })
 
-  scenario('resets once validations are run', () => {
-    const record = new RedwoodRecord({ foo: 'bar' })
+  scenario('resets once validations are run', async () => {
+    const record = await RedwoodRecord.build({ foo: 'bar' })
     record.addError('foo', 'foo is invalid')
     record.validate()
 

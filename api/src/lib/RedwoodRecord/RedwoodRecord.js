@@ -23,22 +23,6 @@ export default class RedwoodRecord {
   //   static primaryKey = 'userId'
   static primaryKey = 'id'
 
-  // Stores hasMany relationships to other models. Can be in the form of a
-  // a class, which is the other model, or an object that has keys containing
-  // several options:
-  //
-  // * model: the class for the other model
-  // * name:  the name of the function that's added to an instance of this model
-  //          to access the related records: ie: the name "blogPosts" would add
-  //          user.blogPosts() (defaults to singular camelCase of the model name)
-  // * foreignKey: the name of the DB field that references back to this model,
-  //               ie. "authorId" in the Post table references the User table
-  //               (defaults to the camelCase name of this model with "Id" appended)
-  //
-  //   static hasMany = [Post]
-  //   static hasMany = [{ model: 'Post', name: 'posts', foreignKey: 'userId' }]
-  static hasMany = []
-
   // Denotes validations that need to run for the given fields. Must be in the
   // form of { field: options } where `field` is the name of the field and
   // `options` are the validation options. See Service Validations docs for
@@ -60,14 +44,25 @@ export default class RedwoodRecord {
     return this.db[this.accessorName || camelCase(this.name)]
   }
 
+  static get reflect() {
+    return new RedwoodRecordReflection(this.name)
+  }
+
   // Alias for where()
   static all(...args) {
     return this.where(...args)
   }
 
+  static async build(attributes) {
+    const record = new this()
+    record.attributes = attributes
+    await RedwoodRecordRelationProxy.addRelations(record)
+    return record
+  }
+
   // Create a new record. Instantiates a new instance and then calls .save() on it
   static async create(attributes, options = {}) {
-    const record = new this(attributes)
+    const record = await this.build(attributes)
 
     return await record.save(options)
   }
@@ -83,9 +78,9 @@ export default class RedwoodRecord {
     )
     if (record === null) {
       throw new Errors.RedwoodRecordNotFoundError(this.name)
-    } else {
-      return record
     }
+
+    return record
   }
 
   // Returns the first record matching the given `where`, otherwise first in the
@@ -96,16 +91,12 @@ export default class RedwoodRecord {
       ...options,
     })
 
-    return record ? new this(record) : null
+    return record ? await this.build(record) : null
   }
 
   // Alias for findBy
   static async first(...args) {
     return this.findBy(...args)
-  }
-
-  static get reflect() {
-    return new RedwoodRecordReflection(this.constructor.name)
   }
 
   // Find all records
@@ -115,9 +106,11 @@ export default class RedwoodRecord {
       ...options,
     })
 
-    return records.map((record) => {
-      return new this(record)
-    })
+    return Promise.all(
+      records.map(async (record) => {
+        return await this.build(record)
+      })
+    )
   }
 
   // Private instance properties
@@ -130,10 +123,7 @@ export default class RedwoodRecord {
 
   // Public instance methods
 
-  constructor(attributes) {
-    this.attributes = attributes
-    this.#createPropertiesForRelationships()
-  }
+  constructor() {}
 
   get attributes() {
     return this.#attributes
@@ -279,40 +269,6 @@ export default class RedwoodRecord {
         this.#errors[name] = []
       }
     }
-  }
-
-  // Turns relationships into getters/setters on the instance for returning
-  // related data. Can be passed the name of the model that's related, or an
-  // object containing options
-  //
-  // static hasMany = [Post]
-  // static hasMany = [{ model: Post, name: 'posts', foreignKey: 'userId' }]
-  // user.posts() // => [Post, Post, Post]
-  async #createPropertiesForRelationships() {
-    this.constructor.hasMany.forEach((relationship) => {
-      let model, name, foreignKey, defaults
-
-      if (typeof relationship === 'object') {
-        model = relationship.model
-        defaults = this.#defaultHasManyOptions(model)
-        name = relationship.name || defaults.name
-        foreignKey = relationship.foreignKey || defaults.foreignKey
-      } else {
-        model = relationship
-        defaults = this.#defaultHasManyOptions(model)
-        name = defaults.name
-        foreignKey = defaults.foreignKey
-      }
-
-      Object.defineProperty(this, name, {
-        get() {
-          return new RedwoodRecordRelationProxy(model, {
-            where: { [foreignKey]: this.id },
-          })
-        },
-        enumerable: true,
-      })
-    })
   }
 
   // Handles errors from saving a record (either update or create), converting

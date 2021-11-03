@@ -9,15 +9,18 @@ class User extends RedwoodRecord {
 }
 
 describe('hasMany', () => {
-  scenario('instantiates hasMany relationships methods', async (scenario) => {
-    const record = await User.find(scenario.user.rob.id)
+  scenario.only(
+    'instantiates hasMany relationships methods',
+    async (scenario) => {
+      const record = await User.find(scenario.user.rob.id)
 
-    expect(record.posts instanceof RedwoodRecordRelationProxy).toEqual(true)
-    expect(record.posts.model).toEqual(Post)
-    expect(record.posts.relation).toEqual({
-      where: { userId: scenario.user.rob.id },
-    })
-  })
+      expect(record.posts instanceof RedwoodRecordRelationProxy).toEqual(true)
+      expect(record.posts.model).toEqual(Post)
+      expect(record.posts.relation).toEqual({
+        where: { userId: scenario.user.rob.id },
+      })
+    }
+  )
 
   scenario('creates records tied to parent', async (scenario) => {
     const record = await User.find(scenario.user.rob.id)

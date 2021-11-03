@@ -35,7 +35,9 @@ describe('relationship', () => {
     const reflection = new RedwoodRecordReflection('User')
     const hasMany = await reflection.hasMany
 
-    expect(hasMany).toEqual({ posts: { modelName: 'Post' } })
+    expect(hasMany).toEqual({
+      posts: { modelName: 'Post', foreignKey: 'userId', primaryKey: 'id' },
+    })
   })
 
   it('includes belongsTo relationships', async () => {
@@ -43,7 +45,7 @@ describe('relationship', () => {
     const belongsTo = await reflection.belongsTo
 
     expect(belongsTo).toEqual({
-      user: { modelName: 'User', foreignKey: 'userId' },
+      user: { modelName: 'User', foreignKey: 'userId', primaryKey: 'id' },
     })
   })
 
