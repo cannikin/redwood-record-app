@@ -7,10 +7,20 @@ export default class RedwoodRecordRelationProxy {
     this.relation = relation
   }
 
-  all(where, options = {}) {
-    const relatedWhere = { where, ...this.relation.where }
+  where(whereSelector, options = {}) {
+    const relatedWhere = { whereSelector, ...this.relation.where }
 
     return this.model.all({ where: relatedWhere }, options)
+  }
+
+  all(...args) {
+    return this.where(...args)
+  }
+
+  create(attributes, options = {}) {
+    const relatedAttributes = { ...attributes, ...this.relation.where }
+
+    return this.model.create(relatedAttributes, options)
   }
 
   find(id, options = {}) {
