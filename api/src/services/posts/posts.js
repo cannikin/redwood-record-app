@@ -1,23 +1,21 @@
-import Post from 'src/models/Post'
-
 export const posts = async () => {
-  return context.currentUser.posts()
+  return context.currentUser.posts.all()
 }
 
 export const post = ({ id }) => {
-  return Post.find(id)
+  return context.currentUser.posts().find(id)
 }
 
 export const createPost = ({ input }) => {
-  return Post.create(input)
+  return context.currentUser.posts().create(input)
 }
 
 export const updatePost = async ({ id, input }) => {
-  const post = await Post.find(id)
+  const post = await context.currentUser.posts().find(id)
   return post.update(input)
 }
 
 export const deletePost = async ({ id }) => {
-  const post = await Post.find(id)
+  const post = await context.currentUser.posts().find(id)
   return post.destroy()
 }
