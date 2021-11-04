@@ -2,7 +2,7 @@ import path from 'path'
 import { getPaths } from '@redwoodjs/internal'
 import { getDMMF } from '@prisma/sdk'
 
-export default class RedwoodRecordReflection {
+export default class Reflection {
   #hasMany = {}
   #belongsTo = {}
   #attributes = {}

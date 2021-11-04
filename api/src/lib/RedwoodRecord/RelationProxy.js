@@ -2,15 +2,15 @@
 // so that any function called on it is called on the original model, but with
 // the relations attributes automatically merged in.
 
-export default class RedwoodRecordRelationProxy {
+export default class RelationProxy {
   static async addRelations(record) {
     const hasMany = await record.constructor.reflect.hasMany
 
     for (const [name, options] of Object.entries(hasMany)) {
       Object.defineProperty(record, name, {
-        get() {
-          return new RedwoodRecordRelationProxy(options.modelName, {
-            where: { [options.foreignKey]: this[options.primaryKey] },
+        async get() {
+          return new RelationProxy(options.modelName, {
+            where: { [options.foreignKey]: record[options.primaryKey] },
           })
         },
         enumerable: true,
@@ -18,9 +18,9 @@ export default class RedwoodRecordRelationProxy {
     }
   }
 
-  constructor(model, relation) {
+  constructor(modelName, relation) {
     // Stores the model this proxy is proxying
-    this.model = model
+    this.model = modelName
     // Stores the relation attributes, like `{ userId: 123 }`
     this.relation = relation
   }

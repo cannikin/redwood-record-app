@@ -1,5 +1,5 @@
 import RedwoodRecord from './RedwoodRecord'
-import RedwoodRecordRelationProxy from './RedwoodRecordRelationProxy'
+import RelationProxy from './RelationProxy'
 
 global.modelDeleteOrder = ['Post', 'User']
 
@@ -13,10 +13,12 @@ describe('hasMany', () => {
     'instantiates hasMany relationships methods',
     async (scenario) => {
       const record = await User.find(scenario.user.rob.id)
+      const proxy = await record.posts
+      console.info(proxy.model)
 
-      expect(record.posts instanceof RedwoodRecordRelationProxy).toEqual(true)
-      expect(record.posts.model).toEqual(Post)
-      expect(record.posts.relation).toEqual({
+      expect(proxy instanceof RelationProxy).toEqual(true)
+      expect(proxy.model).toEqual(Post)
+      expect(proxy.relation).toEqual({
         where: { userId: scenario.user.rob.id },
       })
     }

@@ -1,5 +1,5 @@
 import RedwoodRecord from './RedwoodRecord'
-import RedwoodRecordReflection from './RedwoodRecordReflection'
+import Reflection from './Reflection'
 import * as Errors from './errors'
 import { db } from '../db'
 
@@ -32,10 +32,8 @@ describe('static methods', () => {
     expect(RedwoodRecord.primaryKey).toEqual('id')
   })
 
-  scenario('reflect returns instance of RedwoodRecordReflection', () => {
-    expect(RedwoodRecord.reflect instanceof RedwoodRecordReflection).toEqual(
-      true
-    )
+  scenario('reflect returns instance of Reflection', () => {
+    expect(RedwoodRecord.reflect instanceof Reflection).toEqual(true)
   })
 
   scenario('defaults validates', () => {
@@ -54,7 +52,7 @@ describe('static methods', () => {
 describe('instance methods', () => {
   scenario('instantiates with a list of attributes', async () => {
     const attrs = { foo: 'bar' }
-    const record = await RedwoodRecord.build(attrs)
+    const record = await User.build(attrs)
 
     expect(record.attributes).toEqual(attrs)
   })

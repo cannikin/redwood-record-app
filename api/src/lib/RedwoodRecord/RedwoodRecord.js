@@ -5,8 +5,8 @@ import pluralize from 'pluralize'
 import { db } from '../../lib/db'
 
 import * as Errors from './errors'
-import RedwoodRecordReflection from './RedwoodRecordReflection'
-import RedwoodRecordRelationProxy from './RedwoodRecordRelationProxy'
+import Reflection from './Reflection'
+import RelationProxy from './RelationProxy'
 
 export default class RedwoodRecord {
   ////////////////////////////
@@ -53,7 +53,7 @@ export default class RedwoodRecord {
   }
 
   static get reflect() {
-    return new RedwoodRecordReflection(this.name)
+    return new Reflection(this.name)
   }
 
   // Alias for where()
@@ -64,7 +64,7 @@ export default class RedwoodRecord {
   static async build(attributes) {
     const record = new this()
     record.attributes = attributes
-    await RedwoodRecordRelationProxy.addRelations(record)
+    await RelationProxy.addRelations(record)
     return record
   }
 
