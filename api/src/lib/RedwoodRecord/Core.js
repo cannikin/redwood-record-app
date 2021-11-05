@@ -135,10 +135,10 @@ export class Core {
   _createPropertyForAttribute(name) {
     Object.defineProperty(this, name, {
       get() {
-        return this.#attributeGetter(name)
+        return this._attributeGetter(name)
       },
       set(value) {
-        this.#attributeSetter(name, value)
+        this._attributeSetter(name, value)
       },
       enumerable: true,
     })
@@ -150,7 +150,7 @@ export class Core {
 
   // Handles errors from saving a record (either update or create), converting
   // to this.#errors messages, or throwing RedwoodRecord errors
-  #saveErrorHandler(error, shouldThrow) {
+  _saveErrorHandler(error, shouldThrow) {
     if (error.message.match(/Record to update not found/)) {
       this._onSaveError(
         'base',
@@ -174,11 +174,11 @@ export class Core {
     }
   }
 
-  #attributeGetter(name) {
+  _attributeGetter(name) {
     return this.#attributes[name]
   }
 
-  #attributeSetter(name, value) {
+  _attributeSetter(name, value) {
     return (this.#attributes[name] = value)
   }
 
@@ -238,7 +238,7 @@ export class Core {
         // update attributes in case someone else changed since we last read them
         this.attributes = newAttributes
       } catch (e) {
-        this.#saveErrorHandler(e, options.throw)
+        this._saveErrorHandler(e, options.throw)
         return false
       }
 

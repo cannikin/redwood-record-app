@@ -1,4 +1,4 @@
-import { RedwoodRecord, Reflection } from './internal'
+import { Core } from './internal'
 import * as Errors from './errors'
 import { db } from '../db'
 
@@ -6,88 +6,64 @@ global.modelDeleteOrder = ['Post', 'User']
 
 // General top level behavior of RedwoodRecord
 
-class Post extends RedwoodRecord {
+class Post extends Core {
   static requiredModels = []
 }
-class User extends RedwoodRecord {
+class User extends Core {
   static requiredModels = []
 }
 Post.requiredModels = [User]
 User.requiredModels = [Post]
 
-describe('static methods', () => {
-  scenario('returns the name of itself', () => {
-    expect(RedwoodRecord.name).toEqual('RedwoodRecord')
+describe.only('static methods', () => {
+  it('returns the name of itself', () => {
+    expect(Core.name).toEqual('Core')
   })
 
-  scenario('returns the db object', () => {
-    expect(RedwoodRecord.db).toEqual(db)
+  it('returns the db object', () => {
+    expect(Core.db).toEqual(db)
   })
 
-  scenario('defaults `accessor` property to undefined', () => {
-    expect(RedwoodRecord.accessorName).toEqual(undefined)
+  it('defaults `accessor` property to undefined', () => {
+    expect(Core.accessorName).toEqual(undefined)
   })
 
-  scenario('can override the accessor name if needed', () => {
-    class TestClass extends RedwoodRecord {
+  it('can override the accessor name if needed', () => {
+    class TestClass extends Core {
       static accessorName = 'TesterTable'
     }
 
     expect(TestClass.accessorName).toEqual('TesterTable')
   })
 
-  scenario('defaults `primaryKey`', () => {
-    expect(RedwoodRecord.primaryKey).toEqual('id')
+  it('defaults `primaryKey`', () => {
+    expect(Core.primaryKey).toEqual('id')
   })
 
-  scenario('reflect returns instance of Reflection', () => {
-    expect(RedwoodRecord.reflect instanceof Reflection).toEqual(true)
-  })
-
-  scenario('schema returns the parsed schema.prisma', () => {
-    expect(RedwoodRecord.schema).toHaveProperty('models')
-  })
-
-  scenario('defaults validates', () => {
-    expect(RedwoodRecord.validates).toEqual([])
-  })
-
-  scenario('adds validate directives', () => {
-    class TestClass extends RedwoodRecord {
-      static validates = [{ email: { email: true } }]
-    }
-
-    expect(TestClass.validates).toEqual([{ email: { email: true } }])
+  it('stores the parsed schema.prisma', () => {
+    expect(Core.schema).toHaveProperty('models')
   })
 })
 
 describe('instance methods', () => {
-  scenario('instantiates with a list of attributes', async () => {
+  it('instantiates with a list of attributes', () => {
     const attrs = { foo: 'bar' }
-    const record = await User.build(attrs)
+    const record = Core.build(attrs)
 
     expect(record.attributes).toEqual(attrs)
   })
 
-  scenario('creates getters for each attribute', async () => {
-    const record = await RedwoodRecord.build({ foo: 'bar' })
+  it('creates getters for each attribute', () => {
+    const record = Core.build({ foo: 'bar' })
 
     expect(record.foo).toEqual('bar')
   })
 
-  scenario('creates setters for each attribute', async () => {
-    const record = await RedwoodRecord.build({ foo: 'bar' })
+  it('creates setters for each attribute', () => {
+    const record = Core.build({ foo: 'bar' })
     record.foo = 'baz'
 
     expect(record.foo).toEqual('baz')
-  })
-
-  scenario('instantiates with an error object', async () => {
-    const attrs = { foo: 'bar' }
-    const record = await RedwoodRecord.build(attrs)
-
-    expect(record.errors.base).toEqual([])
-    expect(record.errors.foo).toEqual([])
   })
 })
 
@@ -189,22 +165,6 @@ describe('User subclass', () => {
   })
 
   describe('instance methods', () => {
-    describe('addError', () => {
-      scenario('can add an error on base', async () => {
-        const record = await RedwoodRecord.build()
-        record.addError('base', 'base is not valid')
-
-        expect(record.errors.base).toEqual(['base is not valid'])
-      })
-
-      scenario('can add an error on a field', async () => {
-        const record = await RedwoodRecord.build({ foo: 'bar' })
-        record.addError('foo', 'foo is not valid')
-
-        expect(record.errors.foo).toEqual(['foo is not valid'])
-      })
-    })
-
     describe('create', () => {
       scenario('can create a record', async () => {
         const user = await User.create({
@@ -253,13 +213,6 @@ describe('User subclass', () => {
           expect(result).toEqual(false)
         })
 
-        scenario('adds error if required field is missing', async () => {
-          const user = await User.build()
-          await user.save()
-
-          expect(user.errors.base).toEqual(['email is missing'])
-        })
-
         scenario('throws error if given the option', async () => {
           const user = await User.build()
           try {
@@ -268,16 +221,14 @@ describe('User subclass', () => {
             expect(
               e instanceof Errors.RedwoodRecordMissingAttributeError
             ).toEqual(true)
-            expect(e.message).toEqual('email is missing')
           }
-          expect.assertions(2)
+          expect.assertions(1)
         })
       })
 
       describe('update', () => {
         scenario('returns true if update is successful', async (scenario) => {
           const user = await User.build(scenario.user.rob)
-          const oldEmail = user.email
           user.email = 'updated@redwoodjs.com'
           const result = await user.save()
 
@@ -310,22 +261,6 @@ describe('User subclass', () => {
           }
         )
 
-        scenario('adds error to `base` if id not found', async (scenario) => {
-          const user = await User.build(scenario.user.rob)
-          user.id = 999999999
-          await user.save()
-
-          expect(user.errors.base).toEqual(['User record to update not found'])
-        })
-
-        scenario('catches null required field errors', async (scenario) => {
-          const user = await User.build(scenario.user.rob)
-          user.email = null // email is required in schema
-          await user.save()
-
-          expect(user.errors.email).toEqual(['must not be null'])
-        })
-
         scenario(
           'throws on null required field if given the option',
           async (scenario) => {
@@ -343,17 +278,6 @@ describe('User subclass', () => {
             expect.assertions(1)
           }
         )
-
-        scenario('clears any errors after save', async (scenario) => {
-          const user = await User.build(scenario.user.rob)
-          user.email = null // email is required in schema
-          await user.save()
-          expect(user.errors.email).toEqual(['must not be null'])
-
-          user.email = `${Math.random()}@redwoodjs.com`
-          await user.save()
-          expect(user.errors.email).toEqual([])
-        })
       })
     })
 
@@ -366,36 +290,5 @@ describe('User subclass', () => {
         expect(user.name).toEqual('Robert Cameron')
       })
     })
-  })
-})
-
-describe('save', () => {
-  scenario('returns false if record is invalid', async (scenario) => {
-    User.validates = [
-      {
-        email: { presence: true },
-      },
-    ]
-    const user = await User.find(scenario.user.rob.id)
-    user.email = null
-
-    expect(await user.save()).toEqual(false)
-    expect(user.errors.email).toEqual(['email must be present'])
-  })
-
-  scenario('throws if option provided', async (scenario) => {
-    User.validates = [
-      {
-        email: { presence: true },
-      },
-    ]
-    const user = await User.find(scenario.user.rob.id)
-    user.email = null
-
-    try {
-      await user.save({ throw: true })
-    } catch (e) {
-      expect(e.message).toEqual('email must be present')
-    }
   })
 })
