@@ -1,7 +1,7 @@
 // Introspects a given model and returns its attributes and figures out what
 // other models it belongs to or has many of.
 
-import { RedwoodRecord } from './internal'
+import { Core } from './internal'
 
 export class Reflection {
   #hasMany = null
@@ -38,7 +38,7 @@ export class Reflection {
 
   // Finds the schema for a single model
   #schemaForModel(name = this.model.name) {
-    return RedwoodRecord.schema.models.find((model) => model.name === name)
+    return Core.schema.models.find((model) => model.name === name)
   }
 
   #parseHasMany() {

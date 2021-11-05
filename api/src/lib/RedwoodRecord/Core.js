@@ -1,0 +1,255 @@
+import camelCase from 'camelcase'
+
+import { db } from '../db'
+import datamodel from '../../../../.redwood/datamodel.json'
+import * as Errors from './errors'
+
+export class Core {
+  ////////////////////////////
+  // Public class properties
+  ////////////////////////////
+
+  // Set in child class to override DB accessor name. This is the name of the
+  // property you would call on an instance of Prisma Client in order the query
+  // a model in your schema. ie. For the call `db.user` the accessorName is
+  // "user". Not setting this property will use the default camelCase version of
+  // the class name itself as the accessor.
+  //
+  //   static accessorName = 'users'
+  static accessorName
+
+  // Set in child class to override primary key field name for this model.
+  //
+  //   static primaryKey = 'userId'
+  static primaryKey = 'id'
+
+  // Parsed schema.prisma for use in subclasses
+  static schema = datamodel
+
+  // Any other model that may be required by this model
+  static requiredModels = []
+
+  /////////////////////////
+  // Public class methods
+  /////////////////////////
+
+  // Access the raw Prisma Client for doing low level query manipulation
+  static get db() {
+    return db
+  }
+
+  // Returns the Prisma DB accessor instance (ex. db.user)
+  static get accessor() {
+    return this.db[this.accessorName || camelCase(this.name)]
+  }
+
+  // Alias for where()
+  static all(...args) {
+    return this.where(...args)
+  }
+
+  static build(attributes) {
+    const record = new this()
+    record.attributes = attributes
+    return record
+  }
+
+  // Create a new record. Instantiates a new instance and then calls .save() on it
+  static async create(attributes, options = {}) {
+    const record = this.build(attributes)
+
+    return await record.save(options)
+  }
+
+  // Find a single record by ID.
+  static async find(id, options = {}) {
+    const record = await this.findBy(
+      {
+        [this.primaryKey]: id,
+        ...(options.where || {}),
+      },
+      options
+    )
+    if (record === null) {
+      throw new Errors.RedwoodRecordNotFoundError(this.name)
+    }
+
+    return record
+  }
+
+  // Returns the first record matching the given `where`, otherwise first in the
+  // whole table (whatever the DB determines is the first record)
+  static async findBy(attributes, options = {}) {
+    const record = await this.accessor.findFirst({
+      where: attributes,
+      ...options,
+    })
+
+    return record ? await this.build(record) : null
+  }
+
+  // Alias for findBy
+  static async first(...args) {
+    return this.findBy(...args)
+  }
+
+  // Find all records
+  static async where(attributes, options = {}) {
+    const records = await this.accessor.findMany({
+      where: attributes,
+      ...options,
+    })
+
+    return Promise.all(
+      records.map(async (record) => {
+        return await this.build(record)
+      })
+    )
+  }
+
+  ///////////////////////////////
+  // Private instance properties
+  ///////////////////////////////
+
+  // Stores instance attributes object internally
+  #attributes = {}
+
+  ////////////////////////////
+  // Private instance methods
+  ////////////////////////////
+
+  // Turns a plain object's properties into getters/setters on the instance:
+  //
+  // const user = new User({ name: 'Rob' })
+  // user.name  // => 'Rob'
+  _createPropertiesForAttributes() {
+    for (const [name, _value] of Object.entries(this.attributes)) {
+      // eslint-disable-next-line
+      if (!this.hasOwnProperty(name)) {
+        this._createPropertyForAttribute(name)
+      }
+    }
+  }
+
+  // Create property for a single attribute
+  _createPropertyForAttribute(name) {
+    Object.defineProperty(this, name, {
+      get() {
+        return this.#attributeGetter(name)
+      },
+      set(value) {
+        this.#attributeSetter(name, value)
+      },
+      enumerable: true,
+    })
+  }
+
+  _onSaveError(_name, _message) {
+    // to be implemented in RedwoodRecord which knows how to handle errors
+  }
+
+  // Handles errors from saving a record (either update or create), converting
+  // to this.#errors messages, or throwing RedwoodRecord errors
+  #saveErrorHandler(error, shouldThrow) {
+    if (error.message.match(/Record to update not found/)) {
+      this._onSaveError(
+        'base',
+        `${this.constructor.name} record to update not found`
+      )
+      if (shouldThrow) {
+        throw new Errors.RedwoodRecordNotFoundError(this.constructor.name)
+      }
+    } else if (error.message.match(/must not be null/)) {
+      const [_all, name] = error.message.match(/Argument (\w+)/)
+      this._onSaveError(name, 'must not be null')
+      if (shouldThrow) {
+        throw new Errors.RedwoodRecordNullAttributeError(name)
+      }
+    } else if (error.message.match(/is missing/)) {
+      const [_all, name] = error.message.match(/Argument (\w+)/)
+      this._onSaveError('base', `${name} is missing`)
+      if (shouldThrow) {
+        throw new Errors.RedwoodRecordMissingAttributeError(name)
+      }
+    }
+  }
+
+  #attributeGetter(name) {
+    return this.#attributes[name]
+  }
+
+  #attributeSetter(name, value) {
+    return (this.#attributes[name] = value)
+  }
+
+  ////////////////////////////
+  // Public instance methods
+  ////////////////////////////
+
+  constructor() {}
+
+  get attributes() {
+    return this.#attributes
+  }
+
+  set attributes(attrs) {
+    if (attrs) {
+      this.#attributes = attrs
+      this._createPropertiesForAttributes()
+    }
+  }
+
+  async destroy(options = {}) {
+    delete options.throw
+
+    // try {
+    await this.constructor.accessor.delete({
+      where: { [this.constructor.primaryKey]: this.attributes.id },
+      ...options,
+    })
+    // } catch (e) {
+    //   return false
+    // }
+
+    return this
+  }
+
+  // Saves the attributes to the database
+  async save(options = {}) {
+    if (this.validate({ throw: options.throw })) {
+      const { id, ...saveAttributes } = this.attributes
+
+      try {
+        let newAttributes
+
+        if (id) {
+          // update existing record
+          newAttributes = await this.constructor.accessor.update({
+            where: { [this.constructor.primaryKey]: id },
+            data: saveAttributes,
+          })
+        } else {
+          // create new record
+          newAttributes = await this.constructor.accessor.create({
+            data: saveAttributes,
+          })
+        }
+
+        // update attributes in case someone else changed since we last read them
+        this.attributes = newAttributes
+      } catch (e) {
+        this.#saveErrorHandler(e, options.throw)
+        return false
+      }
+
+      return this
+    } else {
+      return false
+    }
+  }
+
+  async update(attributes = {}, options = {}) {
+    this.#attributes = Object.assign(this.#attributes, attributes)
+    return await this.save(options)
+  }
+}

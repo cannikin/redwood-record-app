@@ -1,3 +1,5 @@
 export * from './Reflection'
 export * from './RelationProxy'
+export * from './Core'
+export * from './Validation'
 export * from './RedwoodRecord'
