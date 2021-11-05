@@ -34,8 +34,9 @@ describe.only('hasError', () => {
   it('resets once validations are run', () => {
     const record = new TestClass()
     record.addError('base', 'base is invalid')
-    record.validate()
+    expect(record.hasError).toEqual(true)
 
+    record.validate()
     expect(record.hasError).toEqual(false)
   })
 })

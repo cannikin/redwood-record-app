@@ -6,7 +6,7 @@ export const Validation = (Base) =>
     _errors = { base: [] }
 
     // Removes all error messages.
-    #clearErrors() {
+    _clearErrors() {
       for (const [attribute, _array] of Object.entries(this._errors)) {
         this._errors[attribute] = []
       }
@@ -56,7 +56,7 @@ export const Validation = (Base) =>
     // Checks each field against validate directives. Creates errors if so and
     // returns `false`, otherwise returns `true`.
     validate(options = {}) {
-      this.#clearErrors()
+      this._clearErrors()
 
       // if there are no validations, then we're valid!
       if (this.constructor.validates.length === 0) {
