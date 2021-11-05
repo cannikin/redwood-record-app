@@ -1,73 +1,56 @@
-import path from 'path'
-import { getPaths } from '@redwoodjs/internal'
-import { getDMMF } from '@prisma/sdk'
+// Introspects a given model and returns its attributes and figures out what
+// other models it belongs to or has many of.
 
-export default class Reflection {
-  #hasMany = {}
-  #belongsTo = {}
-  #attributes = {}
+import { RedwoodRecord } from './internal'
 
-  #parsed = false
+export class Reflection {
+  #hasMany = null
+  #belongsTo = null
+  #attributes = null
 
-  constructor(name) {
-    this.modelName = name
+  constructor(model) {
+    this.model = model
   }
 
   get attributes() {
-    return (async () => {
-      if (!this.#parsed) {
-        await this.#parse()
-      }
-      return this.#attributes
-    })()
+    if (!this.#attributes) {
+      this.#parseAttributes()
+    }
+
+    return this.#attributes
   }
 
   get belongsTo() {
-    return (async () => {
-      if (!this.#parsed) {
-        await this.#parse()
-      }
-      return this.#belongsTo
-    })()
+    if (!this.#belongsTo) {
+      this.#parseBelongsTo()
+    }
+
+    return this.#belongsTo
   }
 
   get hasMany() {
-    return (async () => {
-      if (!this.#parsed) {
-        await this.#parse()
-      }
-      return this.#hasMany
-    })()
+    if (!this.#hasMany) {
+      this.#parseHasMany()
+    }
+
+    return this.#hasMany
   }
 
   // Finds the schema for a single model
-  #schemaForModel(schema, name) {
-    return schema.datamodel.models.find((model) => model.name === name)
+  #schemaForModel(name = this.model.name) {
+    return RedwoodRecord.schema.models.find((model) => model.name === name)
   }
 
-  async #parse() {
-    const schema = await getDMMF({
-      datamodelPath: path.join(getPaths().api.db, 'schema.prisma'),
-    })
-
-    this.#parseHasMany(schema)
-    this.#parseBelongsTo(schema)
-    // Must parse last so that we can exclude hasMany and belongsTo relations
-    // from scalar attributes
-    this.#parseAttributes(schema)
-
-    this.#parsed = true
-  }
-
-  #parseHasMany(schema) {
-    const selfSchema = this.#schemaForModel(schema, this.modelName)
+  #parseHasMany() {
+    const selfSchema = this.#schemaForModel()
+    this.#hasMany = {}
 
     selfSchema?.fields?.forEach((field) => {
       if (field.isList) {
         // get other side of relationship to determine foreign key name
-        const otherSchema = this.#schemaForModel(schema, field.type)
+        const otherSchema = this.#schemaForModel(field.type)
         const belongsTo = otherSchema.fields.find(
-          (field) => field.type === this.modelName
+          (field) => field.type === this.model.name
         )
 
         this.#hasMany[field.name] = {
@@ -79,11 +62,12 @@ export default class Reflection {
     })
   }
 
-  #parseBelongsTo(schema) {
-    const selfSchema = this.#schemaForModel(schema, this.modelName)
+  #parseBelongsTo() {
+    const selfSchema = this.#schemaForModel()
+    this.#belongsTo = {}
 
     selfSchema?.fields?.forEach((field) => {
-      if (field.kind === 'object') {
+      if (field.relationFromFields?.length) {
         this.#belongsTo[field.name] = {
           modelName: field.type,
           foreignKey: field.relationFromFields[0],
@@ -93,8 +77,16 @@ export default class Reflection {
     })
   }
 
-  #parseAttributes(schema) {
-    const selfSchema = this.#schemaForModel(schema, this.modelName)
+  #parseAttributes() {
+    const selfSchema = this.#schemaForModel()
+    this.#attributes = {}
+
+    if (!this.#hasMany) {
+      this.#parseHasMany()
+    }
+    if (!this.belongsTo) {
+      this.#parseBelongsTo()
+    }
 
     selfSchema?.fields?.forEach((field) => {
       const { name, ...props } = field

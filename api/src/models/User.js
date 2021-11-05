@@ -1,6 +1,6 @@
-import RedwoodRecord from 'src/lib/RedwoodRecord/RedwoodRecord'
-import Post from './Post'
+import { RedwoodRecord } from '../lib/RedwoodRecord'
+import Post from 'src/models/Post'
 
 export default class User extends RedwoodRecord {
-  static hasMany = [Post]
+  static requiredModels = [Post]
 }

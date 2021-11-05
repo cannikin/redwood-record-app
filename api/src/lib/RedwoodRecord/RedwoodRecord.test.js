@@ -1,11 +1,19 @@
-import RedwoodRecord from './RedwoodRecord'
-import Reflection from './Reflection'
+import { RedwoodRecord, Reflection } from './internal'
 import * as Errors from './errors'
 import { db } from '../db'
 
 global.modelDeleteOrder = ['Post', 'User']
 
 // General top level behavior of RedwoodRecord
+
+class Post extends RedwoodRecord {
+  static requiredModels = []
+}
+class User extends RedwoodRecord {
+  static requiredModels = []
+}
+Post.requiredModels = [User]
+User.requiredModels = [Post]
 
 describe('static methods', () => {
   scenario('returns the name of itself', () => {
@@ -34,6 +42,10 @@ describe('static methods', () => {
 
   scenario('reflect returns instance of Reflection', () => {
     expect(RedwoodRecord.reflect instanceof Reflection).toEqual(true)
+  })
+
+  scenario('schema returns the parsed schema.prisma', () => {
+    expect(RedwoodRecord.schema).toHaveProperty('models')
   })
 
   scenario('defaults validates', () => {
@@ -80,8 +92,6 @@ describe('instance methods', () => {
 })
 
 // Subclass behavior, needs to be backed by an actual model to work
-
-class User extends RedwoodRecord {}
 
 describe('User subclass', () => {
   describe('static methods', () => {

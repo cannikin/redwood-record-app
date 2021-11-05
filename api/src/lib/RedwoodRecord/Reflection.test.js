@@ -18,42 +18,47 @@
 //   title  String
 // }
 
-import Reflection from './Reflection'
+import { Reflection, RedwoodRecord } from './internal'
 
 global.modelDeleteOrder = ['Post', 'User']
 
+class Post extends RedwoodRecord {}
+class User extends RedwoodRecord {
+  static requiredModels = [Post]
+}
+
 describe('constructor', () => {
   it('should store the model name', () => {
-    const reflect = new Reflection('User')
+    const reflect = new Reflection(User)
 
-    expect(reflect.modelName).toEqual('User')
+    expect(reflect.model).toEqual(User)
   })
 })
 
 describe('relationship', () => {
-  it('includes hasMany relationships', async () => {
-    const reflection = new Reflection('User')
-    const hasMany = await reflection.hasMany
+  it('includes hasMany relationships', () => {
+    const reflection = new Reflection(User)
+    const hasMany = reflection.hasMany
 
     expect(hasMany).toEqual({
       posts: { modelName: 'Post', foreignKey: 'userId', primaryKey: 'id' },
     })
   })
 
-  it('includes belongsTo relationships', async () => {
-    const reflection = new Reflection('Post')
-    const belongsTo = await reflection.belongsTo
+  it('includes belongsTo relationships', () => {
+    const reflection = new Reflection(Post)
+    const belongsTo = reflection.belongsTo
 
     expect(belongsTo).toEqual({
       user: { modelName: 'User', foreignKey: 'userId', primaryKey: 'id' },
     })
   })
 
-  it('includes attributes', async () => {
-    const userReflection = new Reflection('User')
-    const userAttributes = await userReflection.attributes
-    const postReflection = new Reflection('Post')
-    const postAttributes = await postReflection.attributes
+  it('includes attributes', () => {
+    const userReflection = new Reflection(User)
+    const userAttributes = userReflection.attributes
+    const postReflection = new Reflection(Post)
+    const postAttributes = postReflection.attributes
 
     expect(Object.keys(userAttributes).length).toEqual(7)
     // doesn't include hasMany relationships

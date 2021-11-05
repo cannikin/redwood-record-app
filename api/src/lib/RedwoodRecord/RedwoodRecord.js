@@ -4,11 +4,12 @@ import pluralize from 'pluralize'
 
 import { db } from '../../lib/db'
 
-import * as Errors from './errors'
-import Reflection from './Reflection'
-import RelationProxy from './RelationProxy'
+import datamodel from '../../../../.redwood/datamodel.json'
 
-export default class RedwoodRecord {
+import * as Errors from './errors'
+import { Reflection, RelationProxy } from './internal'
+
+export class RedwoodRecord {
   ////////////////////////////
   // Public class properties
   ////////////////////////////
@@ -38,6 +39,12 @@ export default class RedwoodRecord {
   //   }]
   static validates = []
 
+  // Parsed schema.prisma for use in subclasses
+  static schema = datamodel
+
+  // Any other model that may be required by this model
+  static requiredModels = []
+
   /////////////////////////
   // Public class methods
   /////////////////////////
@@ -64,7 +71,7 @@ export default class RedwoodRecord {
   static async build(attributes) {
     const record = new this()
     record.attributes = attributes
-    await RelationProxy.addRelations(record)
+    await RelationProxy.addRelations(record, RedwoodRecord.schema)
     return record
   }
 

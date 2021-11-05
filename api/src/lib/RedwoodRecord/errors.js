@@ -27,3 +27,12 @@ export class RedwoodRecordMissingAttributeError extends RedwoodError {
     this.name = 'RedwoodRecordMissingAttributeError'
   }
 }
+
+export class RedwoodRecordMissingRequiredModelError extends RedwoodError {
+  constructor(modelName, requiredModelName) {
+    super(
+      `Tried to build a relationship for ${requiredModelName} model but is not listed as a \`requiredModel\` in ${modelName}`
+    )
+    this.name = 'RedwoodRecordMissingRequiredModelError'
+  }
+}

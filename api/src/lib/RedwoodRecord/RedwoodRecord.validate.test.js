@@ -1,6 +1,20 @@
-import RedwoodRecord from './RedwoodRecord'
+import { RedwoodRecord } from './internal'
 
 global.modelDeleteOrder = ['Post', 'User']
+
+class Post extends RedwoodRecord {
+  static requiredModels = []
+}
+class User extends RedwoodRecord {
+  static requiredModels = []
+}
+Post.requiredModels = [User]
+User.requiredModels = [Post]
+
+beforeEach(() => {
+  User.validates = []
+  Post.validates = []
+})
 
 describe('hasError', () => {
   scenario('defaults to false', async () => {
@@ -34,34 +48,30 @@ describe('hasError', () => {
 
 describe('isValid', () => {
   scenario('returns true if record has no validations', async (scenario) => {
-    class User extends RedwoodRecord {}
-
     const user = await User.find(scenario.user.rob.id)
 
     expect(user.isValid).toEqual(true)
   })
 
   scenario('returns true if record is valid', async (scenario) => {
-    class User extends RedwoodRecord {
-      static validates = [
-        {
-          email: { presence: true },
-        },
-      ]
-    }
+    User.validates = [
+      {
+        email: { presence: true },
+      },
+    ]
+
     const user = await User.find(scenario.user.rob.id)
 
     expect(user.isValid).toEqual(true)
   })
 
   scenario('returns false if record is invalid', async (scenario) => {
-    class User extends RedwoodRecord {
-      static validates = [
-        {
-          email: { presence: true },
-        },
-      ]
-    }
+    User.validates = [
+      {
+        email: { presence: true },
+      },
+    ]
+
     const user = await User.find(scenario.user.rob.id)
     user.email = null
 
@@ -72,34 +82,28 @@ describe('isValid', () => {
 
 describe('validate', () => {
   scenario('returns true if record has no validations', async (scenario) => {
-    class User extends RedwoodRecord {}
-
     const user = await User.find(scenario.user.rob.id)
 
     expect(user.validate()).toEqual(true)
   })
 
   scenario('returns true if record is valid', async (scenario) => {
-    class User extends RedwoodRecord {
-      static validates = [
-        {
-          email: { presence: true },
-        },
-      ]
-    }
+    User.validates = [
+      {
+        email: { presence: true },
+      },
+    ]
     const user = await User.find(scenario.user.rob.id)
 
     expect(user.validate()).toEqual(true)
   })
 
   scenario('returns false if record is invalid', async (scenario) => {
-    class User extends RedwoodRecord {
-      static validates = [
-        {
-          email: { presence: true },
-        },
-      ]
-    }
+    User.validates = [
+      {
+        email: { presence: true },
+      },
+    ]
     const user = await User.find(scenario.user.rob.id)
     user.email = null
 
@@ -108,13 +112,11 @@ describe('validate', () => {
   })
 
   scenario('throws if option provided', async (scenario) => {
-    class User extends RedwoodRecord {
-      static validates = [
-        {
-          email: { presence: true },
-        },
-      ]
-    }
+    User.validates = [
+      {
+        email: { presence: true },
+      },
+    ]
     const user = await User.find(scenario.user.rob.id)
     user.email = null
 
@@ -128,13 +130,11 @@ describe('validate', () => {
 
 describe('save', () => {
   scenario('returns false if record is invalid', async (scenario) => {
-    class User extends RedwoodRecord {
-      static validates = [
-        {
-          email: { presence: true },
-        },
-      ]
-    }
+    User.validates = [
+      {
+        email: { presence: true },
+      },
+    ]
     const user = await User.find(scenario.user.rob.id)
     user.email = null
 
@@ -143,13 +143,11 @@ describe('save', () => {
   })
 
   scenario('throws if option provided', async (scenario) => {
-    class User extends RedwoodRecord {
-      static validates = [
-        {
-          email: { presence: true },
-        },
-      ]
-    }
+    User.validates = [
+      {
+        email: { presence: true },
+      },
+    ]
     const user = await User.find(scenario.user.rob.id)
     user.email = null
 
