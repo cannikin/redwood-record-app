@@ -1,6 +1,9 @@
-import { Core, Reflection, RelationProxy, Validation } from './internal'
+import Core from './Core'
+import Reflection from './Reflection'
+import RelationProxy from './RelationProxy'
+import Validation from './Validation'
 
-export class RedwoodRecord extends Validation(Core) {
+export default class RedwoodRecord extends Validation(Core) {
   static get reflect() {
     return new Reflection(this.name)
   }

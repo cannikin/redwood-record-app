@@ -1,9 +1,9 @@
 // Introspects a given model and returns its attributes and figures out what
 // other models it belongs to or has many of.
 
-import { Core } from './internal'
+import Core from './Core'
 
-export class Reflection {
+export default class Reflection {
   #hasMany = null
   #belongsTo = null
   #attributes = null

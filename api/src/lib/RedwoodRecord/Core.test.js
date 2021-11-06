@@ -1,4 +1,4 @@
-import { Core } from './internal'
+import Core from './Core'
 import * as Errors from './errors'
 import { db } from '../db'
 

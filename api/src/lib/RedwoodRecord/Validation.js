@@ -1,6 +1,6 @@
 import { validate as validateField } from '@redwoodjs/api'
 
-export const Validation = (Base) =>
+export default (Base) =>
   class extends Base {
     // Stores error messages internally
     _errors = { base: [] }

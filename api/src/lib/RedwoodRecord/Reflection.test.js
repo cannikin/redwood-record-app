@@ -18,7 +18,8 @@
 //   title  String
 // }
 
-import { Reflection, RedwoodRecord } from './internal'
+import Reflection from './Reflection'
+import RedwoodRecord from './RedwoodRecord'
 
 global.modelDeleteOrder = ['Post', 'User']
 

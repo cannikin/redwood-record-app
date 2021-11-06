@@ -2,10 +2,10 @@
 // so that any function called on it is called on the original model, but with
 // the relations attributes automatically merged in.
 
-import { Reflection } from './internal'
+import Reflection from './Reflection'
 import * as Errors from './errors'
 
-export class RelationProxy {
+export default class RelationProxy {
   static addRelations(record) {
     const reflection = new Reflection(record.constructor)
 

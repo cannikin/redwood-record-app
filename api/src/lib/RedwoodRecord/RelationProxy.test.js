@@ -1,4 +1,5 @@
-import { RelationProxy, RedwoodRecord } from './internal'
+import RelationProxy from './RelationProxy'
+import RedwoodRecord from './RedwoodRecord'
 import * as Errors from './errors'
 
 global.modelDeleteOrder = ['Post', 'User']

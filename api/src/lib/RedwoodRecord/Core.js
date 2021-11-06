@@ -4,7 +4,7 @@ import { db } from '../db'
 import datamodel from '../../../../.redwood/datamodel.json'
 import * as Errors from './errors'
 
-export class Core {
+export default class Core {
   ////////////////////////////
   // Public class properties
   ////////////////////////////

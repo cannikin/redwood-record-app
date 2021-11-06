@@ -1,4 +1,4 @@
-import { Validation } from './internal'
+import Validation from './Validation'
 import { PresenceValidationError } from '@redwoodjs/api'
 
 global.modelDeleteOrder = ['Post', 'User']
