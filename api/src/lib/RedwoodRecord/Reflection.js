@@ -55,7 +55,8 @@ export default class Reflection {
 
         this.#hasMany[field.name] = {
           modelName: field.type,
-          foreignKey: belongsTo.relationFromFields[0],
+          referenceName: belongsTo.name,
+          foreignKey: belongsTo.relationFromFields[0] || null,
           primaryKey: belongsTo.relationToFields[0],
         }
       }

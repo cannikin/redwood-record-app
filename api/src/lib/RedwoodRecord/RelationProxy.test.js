@@ -2,20 +2,19 @@ import RelationProxy from './RelationProxy'
 import RedwoodRecord from './RedwoodRecord'
 import * as Errors from './errors'
 
-class Post extends RedwoodRecord {
-  static requiredModels = []
-}
-class User extends RedwoodRecord {
-  static requiredModels = []
-}
+class Post extends RedwoodRecord {}
+class User extends RedwoodRecord {}
+class Comment extends RedwoodRecord {}
+class Category extends RedwoodRecord {}
 
 beforeEach(() => {
-  Post.requiredModels = [User]
-  User.requiredModels = [Post]
+  Post.requiredModels = [User, Comment, Category]
+  User.requiredModels = [Post, Comment]
+  Category.requiredModels = [Post]
 })
 
 describe('belongsTo', () => {
-  scenario('adds nothing if model has no belongsTo relations', () => {
+  it('adds nothing if model has no belongsTo relations', () => {
     const record = new User()
 
     RelationProxy.addRelations(record)
@@ -23,7 +22,7 @@ describe('belongsTo', () => {
     expect(record.user).toEqual(undefined)
   })
 
-  scenario('throws error if model does not require needed model', () => {
+  it('throws error if model does not require needed model', () => {
     Post.requiredModels = []
     const record = new Post()
 
@@ -45,14 +44,14 @@ describe('belongsTo', () => {
 })
 
 describe('hasMany', () => {
-  scenario('adds nothing if model has no hasMany relations', () => {
+  it('adds nothing if model has no hasMany relations', () => {
     const record = new Post()
     RelationProxy.addRelations(record)
 
     expect(record.posts).toEqual(undefined)
   })
 
-  scenario('throws error if model does not require needed model', () => {
+  it('throws error if model does not require needed model', () => {
     User.requiredModels = []
     const record = new User()
 
@@ -61,7 +60,7 @@ describe('hasMany', () => {
     )
   })
 
-  scenario('instantiates hasMany proxy', () => {
+  it('instantiates hasMany proxy', () => {
     const record = new User()
     record.id = 1
 
@@ -100,5 +99,34 @@ describe('hasMany', () => {
 
     expect(posts.length).toEqual(1)
     expect(posts[0].id).toEqual(scenario.post.rob.id)
+  })
+})
+
+describe('implicit many-to-many', () => {
+  it('instantiates hasMany proxy', () => {
+    const record = new Post()
+    record.id = 1
+
+    RelationProxy.addRelations(record)
+    const proxy = record.categories
+
+    expect(proxy instanceof RelationProxy).toEqual(true)
+    expect(proxy.model).toEqual(Category)
+    expect(proxy.relation).toEqual({ where: { posts: { every: { id: 1 } } } })
+  })
+
+  scenario('fetches related records with find()', async (scenario) => {
+    const record = await Post.find(scenario.post.rob.id)
+    const category = await record.categories.find(scenario.category.wood.id)
+
+    expect(category.id).toEqual(scenario.category.wood.id)
+  })
+
+  scenario('fetches related records with where()', async (scenario) => {
+    const record = await Post.find(scenario.post.rob.id)
+    const categories = await record.categories.where()
+
+    expect(categories.length).toEqual(1)
+    expect(categories[0].id).toEqual(scenario.category.wood.id)
   })
 })

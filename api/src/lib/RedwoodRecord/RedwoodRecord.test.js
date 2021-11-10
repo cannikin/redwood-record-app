@@ -12,7 +12,8 @@ describe('reflect()', () => {
 describe('build()', () => {
   class Post extends RedwoodRecord {}
   class User extends RedwoodRecord {}
-  User.requiredModels = [Post]
+  class Comment extends RedwoodRecord {}
+  User.requiredModels = [Post, Comment]
 
   it('adds relation properties', () => {
     const user = User.build({})
@@ -71,7 +72,8 @@ describe('_createPropertyForAttribute()', () => {
 describe('_onSaveError()', () => {
   class Post extends RedwoodRecord {}
   class User extends RedwoodRecord {}
-  User.requiredModels = [Post]
+  class Comment extends RedwoodRecord {}
+  User.requiredModels = [Post, Comment]
 
   scenario('returns false if save fails', async (scenario) => {
     const user = await User.find(scenario.user.rob.id)

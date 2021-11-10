@@ -21,10 +21,11 @@
 import Reflection from './Reflection'
 import RedwoodRecord from './RedwoodRecord'
 
+class User extends RedwoodRecord {}
 class Post extends RedwoodRecord {}
-class User extends RedwoodRecord {
-  static requiredModels = [Post]
-}
+// Reflection doesn't require defining related model records
+// User.requiredModels = [Post]
+// Post.requiredModels = [User]
 
 describe('constructor', () => {
   it('should store the model name', () => {
@@ -39,8 +40,23 @@ describe('relationship', () => {
     const reflection = new Reflection(User)
     const hasMany = reflection.hasMany
 
-    expect(hasMany).toEqual({
-      posts: { modelName: 'Post', foreignKey: 'userId', primaryKey: 'id' },
+    expect(hasMany.posts).toEqual({
+      modelName: 'Post',
+      foreignKey: 'userId',
+      primaryKey: 'id',
+      referenceName: 'user',
+    })
+  })
+
+  it('includes implicit many-to-many relationships', () => {
+    const reflection = new Reflection(Post)
+    const hasMany = reflection.hasMany
+
+    expect(hasMany.categories).toEqual({
+      modelName: 'Category',
+      foreignKey: null,
+      primaryKey: 'id',
+      referenceName: 'posts',
     })
   })
 
@@ -48,8 +64,10 @@ describe('relationship', () => {
     const reflection = new Reflection(Post)
     const belongsTo = reflection.belongsTo
 
-    expect(belongsTo).toEqual({
-      user: { modelName: 'User', foreignKey: 'userId', primaryKey: 'id' },
+    expect(belongsTo.user).toEqual({
+      modelName: 'User',
+      foreignKey: 'userId',
+      primaryKey: 'id',
     })
   })
 

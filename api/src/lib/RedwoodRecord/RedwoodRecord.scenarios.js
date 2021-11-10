@@ -31,4 +31,22 @@ export const standard = defineScenario({
       },
     }),
   },
+  category: {
+    wood: (scenario) => ({
+      data: {
+        name: 'Wood',
+        posts: {
+          connect: [{ id: scenario.post.rob.id }],
+        },
+      },
+    }),
+    metal: (scenario) => ({
+      data: {
+        name: 'Metal',
+        posts: {
+          connect: [{ id: scenario.post.tom.id }],
+        },
+      },
+    }),
+  },
 })

@@ -28,9 +28,21 @@ export default class RelationProxy {
 
       Object.defineProperty(record, name, {
         get() {
-          return new RelationProxy(model, {
-            where: { [options.foreignKey]: record[options.primaryKey] },
-          })
+          if (options.foreignKey === null) {
+            // implicit many-to-many
+            return new RelationProxy(model, {
+              where: {
+                [options.referenceName]: {
+                  every: { [options.primaryKey]: record[options.primaryKey] },
+                },
+              },
+            })
+          } else {
+            // hasMany
+            return new RelationProxy(model, {
+              where: { [options.foreignKey]: record[options.primaryKey] },
+            })
+          }
         },
         enumerable: true,
       })
