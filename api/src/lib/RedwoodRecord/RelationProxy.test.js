@@ -2,8 +2,6 @@ import RelationProxy from './RelationProxy'
 import RedwoodRecord from './RedwoodRecord'
 import * as Errors from './errors'
 
-global.modelDeleteOrder = ['Post', 'User']
-
 class Post extends RedwoodRecord {
   static requiredModels = []
 }

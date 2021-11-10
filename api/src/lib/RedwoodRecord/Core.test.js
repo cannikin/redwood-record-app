@@ -2,8 +2,6 @@ import Core from './Core'
 import * as Errors from './errors'
 import { db } from '../db'
 
-global.modelDeleteOrder = ['Post', 'User']
-
 // General top level behavior of RedwoodRecord
 
 class Post extends Core {
@@ -15,7 +13,7 @@ class User extends Core {
 Post.requiredModels = [User]
 User.requiredModels = [Post]
 
-describe.only('static methods', () => {
+describe('static methods', () => {
   it('returns the name of itself', () => {
     expect(Core.name).toEqual('Core')
   })
@@ -46,24 +44,26 @@ describe.only('static methods', () => {
 })
 
 describe('instance methods', () => {
-  it('instantiates with a list of attributes', () => {
-    const attrs = { foo: 'bar' }
-    const record = Core.build(attrs)
+  describe('build()', () => {
+    it('instantiates with a list of attributes', () => {
+      const attrs = { foo: 'bar' }
+      const record = Core.build(attrs)
 
-    expect(record.attributes).toEqual(attrs)
-  })
+      expect(record.attributes).toEqual(attrs)
+    })
 
-  it('creates getters for each attribute', () => {
-    const record = Core.build({ foo: 'bar' })
+    it('creates getters for each attribute', () => {
+      const record = Core.build({ foo: 'bar' })
 
-    expect(record.foo).toEqual('bar')
-  })
+      expect(record.foo).toEqual('bar')
+    })
 
-  it('creates setters for each attribute', () => {
-    const record = Core.build({ foo: 'bar' })
-    record.foo = 'baz'
+    it('creates setters for each attribute', () => {
+      const record = Core.build({ foo: 'bar' })
+      record.foo = 'baz'
 
-    expect(record.foo).toEqual('baz')
+      expect(record.foo).toEqual('baz')
+    })
   })
 })
 
@@ -131,7 +131,7 @@ describe('User subclass', () => {
     })
 
     describe('findBy', () => {
-      scenario('returns the first record if no where', async (scenario) => {
+      scenario('returns the first record if no arguments', async (scenario) => {
         const user = await User.findBy()
 
         expect(user.id).toEqual(scenario.user.rob.id)
@@ -147,9 +147,8 @@ describe('User subclass', () => {
       )
 
       scenario('returns null if no records', async () => {
-        global.modelDeleteOrder.forEach(async (model) => {
-          await db.$executeRawUnsafe(`DELETE from "${model}"`)
-        })
+        await db.$executeRawUnsafe(`DELETE from "Post"`)
+        await db.$executeRawUnsafe(`DELETE from "User"`)
 
         expect(await User.findBy()).toEqual(null)
       })
@@ -182,10 +181,34 @@ describe('User subclass', () => {
         // delete posts ahead of time to avoid foreign key error
         await db.$executeRawUnsafe(`DELETE from "Post"`)
 
-        const user = await User.build(scenario.user.tom)
+        const user = User.build(scenario.user.tom)
         await user.destroy()
 
         await expect(User.find(user.id)).rejects.toThrow(
+          Errors.RedwoodRecordNotFoundError
+        )
+      })
+
+      scenario('returns the record that was deleted', async (scenario) => {
+        // delete posts ahead of time to avoid foreign key error
+        await db.$executeRawUnsafe(`DELETE from "Post"`)
+
+        const user = User.build(scenario.user.tom)
+        const result = await user.destroy()
+
+        expect(result).toEqual(user)
+      })
+
+      it('returns false if record not found', async () => {
+        const user = User.build({ id: 99999999 })
+
+        expect(await user.destroy()).toEqual(false)
+      })
+
+      it('throws an error if given the option', async () => {
+        const user = User.build({ id: 99999999 })
+
+        await expect(user.destroy({ throw: true })).rejects.toThrow(
           Errors.RedwoodRecordNotFoundError
         )
       })

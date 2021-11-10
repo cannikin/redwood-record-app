@@ -115,6 +115,73 @@ export default class Core {
   #attributes = {}
 
   ////////////////////////////
+  // Public instance methods
+  ////////////////////////////
+
+  constructor() {}
+
+  get attributes() {
+    return this.#attributes
+  }
+
+  set attributes(attrs) {
+    if (attrs) {
+      this.#attributes = attrs
+      this._createPropertiesForAttributes()
+    }
+  }
+
+  async destroy(options = {}) {
+    const { throw: shouldThrow, ...rest } = options
+
+    try {
+      await this.constructor.accessor.delete({
+        where: { [this.constructor.primaryKey]: this.attributes.id },
+        ...rest,
+      })
+      return this
+    } catch (e) {
+      this._deleteErrorHandler(e, shouldThrow)
+      return false
+    }
+  }
+
+  // Saves the attributes to the database
+  async save(options = {}) {
+    const { id, ...saveAttributes } = this.attributes
+
+    try {
+      let newAttributes
+
+      if (id) {
+        // update existing record
+        newAttributes = await this.constructor.accessor.update({
+          where: { [this.constructor.primaryKey]: id },
+          data: saveAttributes,
+        })
+      } else {
+        // create new record
+        newAttributes = await this.constructor.accessor.create({
+          data: saveAttributes,
+        })
+      }
+
+      // update attributes in case someone else changed since we last read them
+      this.attributes = newAttributes
+    } catch (e) {
+      this._saveErrorHandler(e, options.throw)
+      return false
+    }
+
+    return this
+  }
+
+  async update(attributes = {}, options = {}) {
+    this.#attributes = Object.assign(this.#attributes, attributes)
+    return await this.save(options)
+  }
+
+  ////////////////////////////
   // Private instance methods
   ////////////////////////////
 
@@ -144,8 +211,28 @@ export default class Core {
     })
   }
 
+  _attributeGetter(name) {
+    return this.#attributes[name]
+  }
+
+  _attributeSetter(name, value) {
+    return (this.#attributes[name] = value)
+  }
+
   _onSaveError(_name, _message) {
     // to be implemented in RedwoodRecord which knows how to handle errors
+  }
+
+  _deleteErrorHandler(error, shouldThrow) {
+    if (error.message.match(/Record to delete does not exist/)) {
+      if (shouldThrow) {
+        throw new Errors.RedwoodRecordNotFoundError()
+      }
+    } else {
+      if (shouldThrow) {
+        throw error
+      }
+    }
   }
 
   // Handles errors from saving a record (either update or create), converting
@@ -172,84 +259,5 @@ export default class Core {
         throw new Errors.RedwoodRecordMissingAttributeError(name)
       }
     }
-  }
-
-  _attributeGetter(name) {
-    return this.#attributes[name]
-  }
-
-  _attributeSetter(name, value) {
-    return (this.#attributes[name] = value)
-  }
-
-  ////////////////////////////
-  // Public instance methods
-  ////////////////////////////
-
-  constructor() {}
-
-  get attributes() {
-    return this.#attributes
-  }
-
-  set attributes(attrs) {
-    if (attrs) {
-      this.#attributes = attrs
-      this._createPropertiesForAttributes()
-    }
-  }
-
-  async destroy(options = {}) {
-    delete options.throw
-
-    // try {
-    await this.constructor.accessor.delete({
-      where: { [this.constructor.primaryKey]: this.attributes.id },
-      ...options,
-    })
-    // } catch (e) {
-    //   return false
-    // }
-
-    return this
-  }
-
-  // Saves the attributes to the database
-  async save(options = {}) {
-    if (this.validate({ throw: options.throw })) {
-      const { id, ...saveAttributes } = this.attributes
-
-      try {
-        let newAttributes
-
-        if (id) {
-          // update existing record
-          newAttributes = await this.constructor.accessor.update({
-            where: { [this.constructor.primaryKey]: id },
-            data: saveAttributes,
-          })
-        } else {
-          // create new record
-          newAttributes = await this.constructor.accessor.create({
-            data: saveAttributes,
-          })
-        }
-
-        // update attributes in case someone else changed since we last read them
-        this.attributes = newAttributes
-      } catch (e) {
-        this._saveErrorHandler(e, options.throw)
-        return false
-      }
-
-      return this
-    } else {
-      return false
-    }
-  }
-
-  async update(attributes = {}, options = {}) {
-    this.#attributes = Object.assign(this.#attributes, attributes)
-    return await this.save(options)
   }
 }

@@ -15,6 +15,15 @@ export default class RedwoodRecord extends Validation(Core) {
     return record
   }
 
+  // Don't even try to save if data isn't valid
+  async save(options = {}) {
+    if (this.validate({ throw: options.throw })) {
+      return await super.save(options)
+    } else {
+      return false
+    }
+  }
+
   // Call original method, but add error keys for validation
   _createPropertyForAttribute(name) {
     super._createPropertyForAttribute(name)

@@ -21,8 +21,6 @@
 import Reflection from './Reflection'
 import RedwoodRecord from './RedwoodRecord'
 
-global.modelDeleteOrder = ['Post', 'User']
-
 class Post extends RedwoodRecord {}
 class User extends RedwoodRecord {
   static requiredModels = [Post]

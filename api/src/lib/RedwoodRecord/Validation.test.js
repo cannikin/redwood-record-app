@@ -1,8 +1,6 @@
 import Validation from './Validation'
 import { PresenceValidationError } from '@redwoodjs/api'
 
-global.modelDeleteOrder = ['Post', 'User']
-
 class Mixin {}
 class TestClass extends Validation(Mixin) {}
 

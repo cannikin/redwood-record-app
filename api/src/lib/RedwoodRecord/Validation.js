@@ -58,7 +58,8 @@ export default (Base) =>
     validate(options = {}) {
       this._clearErrors()
 
-      // if there are no validations, then we're valid!
+      // If there are no validations, then we're valid! The database could still
+      // throw an error though, but that's handled elsewhere.
       if (this.constructor.validates.length === 0) {
         return true
       }
