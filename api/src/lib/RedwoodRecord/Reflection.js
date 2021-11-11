@@ -56,6 +56,7 @@ export default class Reflection {
         this.#hasMany[field.name] = {
           modelName: field.type,
           referenceName: belongsTo.name,
+          // a null foreign key denotes an implicit many-to-many relationship
           foreignKey: belongsTo.relationFromFields[0] || null,
           primaryKey: belongsTo.relationToFields[0],
         }

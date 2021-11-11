@@ -50,6 +50,7 @@ export default class Core {
 
   static build(attributes) {
     const record = new this()
+    // TODO: creating a record through the RelationProxy will put that relationship into `attributes` here. Ideally that would only be used for the create and then discarded.
     record.attributes = attributes
     return record
   }
@@ -190,11 +191,23 @@ export default class Core {
   // const user = new User({ name: 'Rob' })
   // user.name  // => 'Rob'
   _createPropertiesForAttributes() {
-    for (const [name, _value] of Object.entries(this.attributes)) {
+    for (const [name, value] of Object.entries(this.attributes)) {
+      // Has attribute already been created on this instance?
       // eslint-disable-next-line
-      if (!this.hasOwnProperty(name)) {
-        this._createPropertyForAttribute(name)
+      if (this.hasOwnProperty(name)) {
+        continue
       }
+      // Is this a relationship attribute?
+      if (
+        value &&
+        typeof value === 'object' &&
+        (Object.keys(value).includes('create') ||
+          Object.keys(value).includes('connect'))
+      ) {
+        continue
+      }
+
+      this._createPropertyForAttribute(name)
     }
   }
 

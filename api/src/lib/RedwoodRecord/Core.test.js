@@ -64,6 +64,14 @@ describe('instance methods', () => {
 
       expect(record.foo).toEqual('baz')
     })
+
+    it('ignores attributes with a `create` or `connect` syntax', () => {
+      const connect = Core.build({ id: 1, posts: { connect: { id: 2 } } })
+      expect(connect.posts).toEqual(undefined)
+
+      const create = Core.build({ id: 1, comments: { create: { id: 2 } } })
+      expect(create.comments).toEqual(undefined)
+    })
   })
 })
 

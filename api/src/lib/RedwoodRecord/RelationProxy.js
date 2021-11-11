@@ -3,7 +3,6 @@
 // the relations attributes automatically merged in.
 
 import Reflection from './Reflection'
-import * as Errors from './errors'
 
 export default class RelationProxy {
   static addRelations(record) {
@@ -15,15 +14,21 @@ export default class RelationProxy {
 
   static #addHasManyRelations(record, hasMany) {
     for (const [name, options] of Object.entries(hasMany)) {
+      // Property already defined from a previous usage, don't try to define again
+      // eslint-disable-next-line
+      // if (record.hasOwnProperty(name)) {
+      //   continue
+      // }
+
       const model = record.constructor.requiredModels.find((requiredModel) => {
         return requiredModel.name === options.modelName
       })
 
       if (!model) {
-        throw new Errors.RedwoodRecordMissingRequiredModelError(
-          record.constructor.name,
-          name
+        console.warn(
+          `Model ${record.constructor.name} has a relationship defined for \`${name}\` in schema.prisma, but there is no Redwoood model for this relationship.`
         )
+        continue
       }
 
       Object.defineProperty(record, name, {
@@ -33,7 +38,14 @@ export default class RelationProxy {
             return new RelationProxy(model, {
               where: {
                 [options.referenceName]: {
-                  every: { [options.primaryKey]: record[options.primaryKey] },
+                  some: { [options.primaryKey]: record[options.primaryKey] },
+                },
+              },
+              create: {
+                [options.referenceName]: {
+                  connect: [
+                    { [options.primaryKey]: record[options.primaryKey] },
+                  ],
                 },
               },
             })
@@ -51,15 +63,21 @@ export default class RelationProxy {
 
   static #addBelongsToRelations(record, belongsTo) {
     for (const [name, options] of Object.entries(belongsTo)) {
+      // Property already defined from a previous usage, don't try to define again
+      // eslint-disable-next-line
+      if (record.hasOwnProperty(name)) {
+        continue
+      }
+
       const model = record.constructor.requiredModels.find((requiredModel) => {
         return requiredModel.name === options.modelName
       })
 
       if (!model) {
-        throw new Errors.RedwoodRecordMissingRequiredModelError(
-          record.constructor.name,
-          name
+        console.warn(
+          `Model ${record.constructor.name} has a relationship defined for \`${name}\` in schema.prisma, but there is no Redwoood model for this relationship.`
         )
+        continue
       }
 
       Object.defineProperty(record, name, {
@@ -85,7 +103,13 @@ export default class RelationProxy {
   }
 
   create(attributes, options = {}) {
-    const relatedAttributes = { ...attributes, ...this.relation.where }
+    let relatedAttributes = { ...attributes }
+
+    if (this.relation.create) {
+      relatedAttributes = { ...relatedAttributes, ...this.relation.create }
+    } else {
+      relatedAttributes = { ...relatedAttributes, ...this.relation.where }
+    }
 
     return this.model.create(relatedAttributes, options)
   }
